@@ -20,12 +20,8 @@ public sealed class GetApiStatisticsQueryHandler : IRequestHandler<GetApiStatist
     private readonly IOptionsMonitor<StatisticsOptions> _optionsMonitor;
     private readonly TimeProvider _timeProvider;
 
-    public GetApiStatisticsQueryHandler(
-        IApiStatisticsStore statistics,
-        IEnumerable<IExternalApiClient> clients,
-        AggregationMapper mapper,
-        IOptionsMonitor<StatisticsOptions> optionsMonitor,
-        TimeProvider timeProvider)
+    public GetApiStatisticsQueryHandler(IApiStatisticsStore statistics, IEnumerable<IExternalApiClient> clients,
+        AggregationMapper mapper, IOptionsMonitor<StatisticsOptions> optionsMonitor, TimeProvider timeProvider)
     {
         _statistics = statistics;
         _clients = clients;
@@ -42,7 +38,12 @@ public sealed class GetApiStatisticsQueryHandler : IRequestHandler<GetApiStatist
         // Registered APIs that haven't been called yet are reported with zero values,
         // so the consumer always sees the full list of integrated APIs.
         foreach (var client in _clients)
-            snapshots.TryAdd(client.Name, Empty(client.Name, options));
+        {
+            if (!snapshots.ContainsKey(client.Name))
+            {
+                snapshots.Add(client.Name, Empty(client.Name, options));
+            }
+        }
 
         var response = new ApiStatisticsResponseDto
         {
@@ -55,12 +56,13 @@ public sealed class GetApiStatisticsQueryHandler : IRequestHandler<GetApiStatist
         return Task.FromResult(response);
     }
 
-    private static ApiStatisticsSnapshot Empty(string apiName, StatisticsOptions options) =>
-        new ApiStatisticsSnapshot(apiName, 0, 0, 0, Enum.GetValues<PerformanceBucket>()
+    private static ApiStatisticsSnapshot Empty(string apiName, StatisticsOptions options)
+    {
+        return new ApiStatisticsSnapshot(apiName, 0, 0, 0, Enum.GetValues<PerformanceBucket>()
             .Select(b =>
             {
                 var (lower, upper) = PerformanceBucketClassifier.GetBounds(b, options);
                 return new BucketStatistics(b, lower, upper, 0, 0);
-            })
-            .ToList());
+            }).ToList());
+    }
 }

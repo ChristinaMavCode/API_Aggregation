@@ -62,7 +62,6 @@ public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
     {
         var options = _optionsMonitor.CurrentValue;
         var snapshots = new List<ApiStatisticsSnapshot>(_apis.Count);
-
         foreach (var accumulator in _apis.Values)
         {
             lock (accumulator.Gate)

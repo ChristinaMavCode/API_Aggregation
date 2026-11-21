@@ -13,8 +13,10 @@ namespace API_Aggregation.Application.Middleware;
 public class LogContextMiddleware
 {
     private readonly RequestDelegate _next;
-
-    public LogContextMiddleware(RequestDelegate next) => _next = next;
+    public LogContextMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
 
     public async Task InvokeAsync(HttpContext context)
     {

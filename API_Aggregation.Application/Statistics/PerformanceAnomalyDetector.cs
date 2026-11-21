@@ -30,15 +30,14 @@ public sealed class PerformanceAnomalyDetector
     {
         var options = _optionsMonitor.CurrentValue;
         var window = TimeSpan.FromMinutes(options.WindowMinutes);
-        var anomalies = new List<PerformanceAnomaly>();
 
+        var anomalies = new List<PerformanceAnomaly>();
         foreach (var summary in _statistics.GetPerformanceSummaries(window))
         {
             if (summary.RecentRequestCount < options.MinimumSamples || summary.OverallAverageMs <= 0)
                 continue;
 
             var deviationPercent = (summary.RecentAverageMs - summary.OverallAverageMs) / summary.OverallAverageMs * 100;
-
             if (deviationPercent > options.ThresholdPercent)
             {
                 anomalies.Add(new PerformanceAnomaly(
