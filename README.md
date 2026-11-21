@@ -18,7 +18,7 @@ Prerequisites: [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0).
 
 ```bash
 dotnet run --project API_Aggregation.Api      # http://localhost:5281
-dotnet test                                   # 91 unit tests
+dotnet test                                   # 106 unit tests
 ```
 
 * Interactive API reference (Scalar): <http://localhost:5281/scalar/v1> (Development only)
@@ -246,11 +246,13 @@ Performance anomaly detected for GitHub: average over the last 5 min is 812.4 ms
 
 Any value can be overridden with environment variables, e.g. `ExternalApis__GitHub__ApiKey=...`.
 
+An API is only used when its `ExternalApis:<Name>` section exists: remove (or omit) the section and the client is not registered at all (it won't be called and won't appear in `/statistics`). The sections that are present are validated at startup (`ExternalApiOptionsValidator` + `ValidateOnStart`): a missing or invalid `BaseUrl` or out-of-range values stop the application with a clear message, e.g. `'ExternalApis:GitHub:BaseUrl' is required.`. To switch an API off temporarily while keeping its settings, use `Enabled: false` (it is then reported as `Disabled`).
+
 ---
 
 ## Tests
 
-`API_Aggregation.UnitTests` (xUnit v3, Moq, `FakeTimeProvider`, `FakeLogger`): 91 tests, no network access needed.
+`API_Aggregation.UnitTests` (xUnit v3, Moq, `FakeTimeProvider`, `FakeLogger`): 106 tests, no network access needed.
 
 | Area | What is covered |
 |---|---|

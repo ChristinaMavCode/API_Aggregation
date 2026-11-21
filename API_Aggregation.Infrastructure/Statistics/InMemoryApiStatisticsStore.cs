@@ -18,20 +18,28 @@ namespace API_Aggregation.Infrastructure.Statistics;
 /// The critical sections are a handful of arithmetic operations, so contention is negligible.
 /// </para>
 /// </summary>
-public sealed class InMemoryApiStatisticsStore(IOptionsMonitor<StatisticsOptions> optionsMonitor, TimeProvider timeProvider) : IApiStatisticsStore
+public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
 {
     private static readonly PerformanceBucket[] AllBuckets = Enum.GetValues<PerformanceBucket>();
 
-    private readonly ConcurrentDictionary<string, ApiAccumulator> _apis = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ApiAccumulator> _apis = new ConcurrentDictionary<string, ApiAccumulator>(StringComparer.OrdinalIgnoreCase);
+    private readonly IOptionsMonitor<StatisticsOptions> _optionsMonitor;
+    private readonly TimeProvider _timeProvider;
+
+    public InMemoryApiStatisticsStore(IOptionsMonitor<StatisticsOptions> optionsMonitor, TimeProvider timeProvider)
+    {
+        _optionsMonitor = optionsMonitor;
+        _timeProvider = timeProvider;
+    }
 
     public void Record(string apiName, TimeSpan duration, bool success)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(apiName);
 
-        var options = optionsMonitor.CurrentValue;
+        var options = _optionsMonitor.CurrentValue;
         var elapsedMs = duration.TotalMilliseconds;
         var bucket = PerformanceBucketClassifier.Classify(elapsedMs, options);
-        var now = timeProvider.GetUtcNow();
+        var now = _timeProvider.GetUtcNow();
 
         var accumulator = _apis.GetOrAdd(apiName, static name => new ApiAccumulator(name));
 
@@ -52,7 +60,7 @@ public sealed class InMemoryApiStatisticsStore(IOptionsMonitor<StatisticsOptions
 
     public IReadOnlyList<ApiStatisticsSnapshot> GetSnapshots()
     {
-        var options = optionsMonitor.CurrentValue;
+        var options = _optionsMonitor.CurrentValue;
         var snapshots = new List<ApiStatisticsSnapshot>(_apis.Count);
 
         foreach (var accumulator in _apis.Values)
@@ -82,8 +90,8 @@ public sealed class InMemoryApiStatisticsStore(IOptionsMonitor<StatisticsOptions
 
     public IReadOnlyList<ApiPerformanceSummary> GetPerformanceSummaries(TimeSpan recentWindow)
     {
-        var options = optionsMonitor.CurrentValue;
-        var now = timeProvider.GetUtcNow();
+        var options = _optionsMonitor.CurrentValue;
+        var now = _timeProvider.GetUtcNow();
         var windowStart = now - recentWindow;
         var summaries = new List<ApiPerformanceSummary>(_apis.Count);
 
@@ -131,15 +139,20 @@ public sealed class InMemoryApiStatisticsStore(IOptionsMonitor<StatisticsOptions
 
     private readonly record struct Sample(DateTimeOffset Timestamp, double ElapsedMs);
 
-    private sealed class ApiAccumulator(string apiName)
+    private sealed class ApiAccumulator
     {
-        public object Gate { get; } = new();
-        public string ApiName { get; } = apiName;
+        public ApiAccumulator(string apiName)
+        {
+            ApiName = apiName;
+        }
+
+        public object Gate { get; } = new object();
+        public string ApiName { get; }
         public long TotalRequests;
         public long FailedRequests;
         public double TotalMs;
         public readonly long[] BucketCounts = new long[AllBuckets.Length];
         public readonly double[] BucketTotalMs = new double[AllBuckets.Length];
-        public readonly Queue<Sample> Samples = new();
+        public readonly Queue<Sample> Samples = new Queue<Sample>();
     }
 }

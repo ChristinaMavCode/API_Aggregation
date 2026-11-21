@@ -13,14 +13,21 @@ namespace API_Aggregation.Infrastructure.ExternalApis;
 /// <see cref="IHttpClientFactory"/> and already contains the resilience pipeline
 /// (retries with exponential back-off + jitter, timeouts and circuit breaker).
 /// </summary>
-public abstract class ExternalApiClientBase(HttpClient httpClient, IOptionsMonitor<ExternalApiOptions> optionsMonitor)
-    : IExternalApiClient
+public abstract class ExternalApiClientBase : IExternalApiClient
 {
-    protected static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    protected static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
-    protected HttpClient HttpClient { get; } = httpClient;
+    private readonly IOptionsMonitor<ExternalApiOptions> _optionsMonitor;
 
-    protected ExternalApiOptions Options => optionsMonitor.Get(Name);
+    protected ExternalApiClientBase(HttpClient httpClient, IOptionsMonitor<ExternalApiOptions> optionsMonitor)
+    {
+        HttpClient = httpClient;
+        _optionsMonitor = optionsMonitor;
+    }
+
+    protected HttpClient HttpClient { get; }
+
+    protected ExternalApiOptions Options => _optionsMonitor.Get(Name);
 
     public abstract string Name { get; }
 

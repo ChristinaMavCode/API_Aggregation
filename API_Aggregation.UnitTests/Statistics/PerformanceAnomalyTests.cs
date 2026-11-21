@@ -12,8 +12,8 @@ namespace API_Aggregation.UnitTests.Statistics;
 
 public class PerformanceAnomalyTests
 {
-    private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
-    private readonly AnomalyDetectionOptions _anomalyOptions = new() { WindowMinutes = 5, ThresholdPercent = 50, MinimumSamples = 3 };
+    private readonly FakeTimeProvider _time = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+    private readonly AnomalyDetectionOptions _anomalyOptions = new AnomalyDetectionOptions { WindowMinutes = 5, ThresholdPercent = 50, MinimumSamples = 3 };
     private readonly InMemoryApiStatisticsStore _store;
     private readonly PerformanceAnomalyDetector _detector;
 

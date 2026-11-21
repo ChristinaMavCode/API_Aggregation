@@ -10,7 +10,7 @@ namespace API_Aggregation.UnitTests.Authentication;
 
 public class AuthenticationTests
 {
-    private static readonly JwtOptions Jwt = new()
+    private static readonly JwtOptions Jwt = new JwtOptions
     {
         Key = "unit-test-signing-key-that-is-long-enough-1234567890",
         Issuer = "test-issuer",

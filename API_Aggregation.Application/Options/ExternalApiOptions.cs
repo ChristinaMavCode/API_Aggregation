@@ -31,7 +31,7 @@ public sealed class ExternalApiOptions
     public int MaxRetryAttempts { get; set; } = 2;
 
     /// <summary>Free-form, API specific settings (e.g. secondary URLs).</summary>
-    public Dictionary<string, string> Settings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> Settings { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     public TimeSpan CacheDuration => TimeSpan.FromSeconds(CacheDurationSeconds);
 

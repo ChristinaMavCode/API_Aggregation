@@ -11,11 +11,18 @@ namespace API_Aggregation.Infrastructure.Authentication;
 /// Passwords are compared in constant time to avoid timing attacks.
 /// NOTE: demo only - a real deployment would delegate to an identity provider.
 /// </summary>
-public sealed class UserCredentialValidator(IOptionsMonitor<AuthUsersOptions> optionsMonitor) : IUserCredentialValidator
+public sealed class UserCredentialValidator : IUserCredentialValidator
 {
+    private readonly IOptionsMonitor<AuthUsersOptions> _optionsMonitor;
+
+    public UserCredentialValidator(IOptionsMonitor<AuthUsersOptions> optionsMonitor)
+    {
+        _optionsMonitor = optionsMonitor;
+    }
+
     public bool IsValid(string username, string password)
     {
-        var user = optionsMonitor.CurrentValue.Users
+        var user = _optionsMonitor.CurrentValue.Users
             .FirstOrDefault(u => string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
 
         if (user is null || string.IsNullOrEmpty(user.Password))

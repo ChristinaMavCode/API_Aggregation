@@ -17,14 +17,21 @@ public sealed class GenerateTokenCommandValidator : AbstractValidator<GenerateTo
     }
 }
 
-public sealed class GenerateTokenCommandHandler(
-    IUserCredentialValidator credentialValidator,
-    ITokenService tokenService) : IRequestHandler<GenerateTokenCommand, TokenResponseDto?>
+public sealed class GenerateTokenCommandHandler : IRequestHandler<GenerateTokenCommand, TokenResponseDto?>
 {
+    private readonly IUserCredentialValidator _credentialValidator;
+    private readonly ITokenService _tokenService;
+
+    public GenerateTokenCommandHandler(IUserCredentialValidator credentialValidator, ITokenService tokenService)
+    {
+        _credentialValidator = credentialValidator;
+        _tokenService = tokenService;
+    }
+
     public Task<TokenResponseDto?> Handle(GenerateTokenCommand command, CancellationToken cancellationToken)
     {
-        var result = credentialValidator.IsValid(command.Username!, command.Password!)
-            ? tokenService.CreateToken(command.Username!)
+        var result = _credentialValidator.IsValid(command.Username!, command.Password!)
+            ? _tokenService.CreateToken(command.Username!)
             : null;
 
         return Task.FromResult(result);

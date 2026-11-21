@@ -7,8 +7,8 @@ namespace API_Aggregation.UnitTests.CQRS;
 
 public class GenerateTokenCommandTests
 {
-    private readonly Mock<IUserCredentialValidator> _credentials = new();
-    private readonly Mock<ITokenService> _tokens = new();
+    private readonly Mock<IUserCredentialValidator> _credentials = new Mock<IUserCredentialValidator>();
+    private readonly Mock<ITokenService> _tokens = new Mock<ITokenService>();
 
     [Fact]
     public async Task Handle_ReturnsToken_ForValidCredentials()

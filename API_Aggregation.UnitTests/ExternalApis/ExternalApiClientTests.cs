@@ -14,10 +14,10 @@ namespace API_Aggregation.UnitTests.ExternalApis;
 /// </summary>
 public class ExternalApiClientTests
 {
-    private static readonly ExternalApiRequest Request = new("Athens", "dotnet");
-    private static readonly DateTimeOffset Now = new(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
+    private static readonly ExternalApiRequest Request = new ExternalApiRequest("Athens", "dotnet");
+    private static readonly DateTimeOffset Now = new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
 
-    private static HttpClient Http(HttpMessageHandler handler, string baseUrl) => new(handler) { BaseAddress = new Uri(baseUrl) };
+    private static HttpClient Http(HttpMessageHandler handler, string baseUrl) => new HttpClient(handler) { BaseAddress = new Uri(baseUrl) };
 
     private static TestOptionsMonitor<ExternalApiOptions> Options(string name, ExternalApiOptions options) =>
         new TestOptionsMonitor<ExternalApiOptions>(new ExternalApiOptions()).With(name, options);
@@ -146,10 +146,10 @@ public class ExternalApiClientTests
     [Fact]
     public void CacheKeys_OnlyDependOnTheParametersTheClientUses()
     {
-        IExternalApiClient weather = new OpenMeteoClient(new HttpClient(), Options("x", new()), TimeProvider.System);
-        IExternalApiClient news = new HackerNewsClient(new HttpClient(), Options("x", new()));
+        IExternalApiClient weather = new OpenMeteoClient(new HttpClient(), Options("x", new ExternalApiOptions()), TimeProvider.System);
+        IExternalApiClient news = new HackerNewsClient(new HttpClient(), Options("x", new ExternalApiOptions()));
 
-        Assert.Equal(weather.GetCacheKey(new("Athens", "a")), weather.GetCacheKey(new("Athens", "b")));
-        Assert.Equal(news.GetCacheKey(new("Athens", "a")), news.GetCacheKey(new("London", "a")));
+        Assert.Equal(weather.GetCacheKey(new ExternalApiRequest("Athens", "a")), weather.GetCacheKey(new ExternalApiRequest("Athens", "b")));
+        Assert.Equal(news.GetCacheKey(new ExternalApiRequest("Athens", "a")), news.GetCacheKey(new ExternalApiRequest("London", "a")));
     }
 }

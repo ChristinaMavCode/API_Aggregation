@@ -10,26 +10,39 @@ namespace API_Aggregation.Infrastructure.BackgroundServices;
 /// Periodically analyses the request statistics and logs a warning for every external API whose
 /// average response time over the recent window is significantly above its overall average.
 /// </summary>
-public sealed class PerformanceAnomalyBackgroundService(
-    PerformanceAnomalyDetector detector,
-    IOptionsMonitor<AnomalyDetectionOptions> optionsMonitor,
-    TimeProvider timeProvider,
-    ILogger<PerformanceAnomalyBackgroundService> logger) : BackgroundService
+public sealed class PerformanceAnomalyBackgroundService : BackgroundService
 {
+    private readonly PerformanceAnomalyDetector _detector;
+    private readonly IOptionsMonitor<AnomalyDetectionOptions> _optionsMonitor;
+    private readonly TimeProvider _timeProvider;
+    private readonly ILogger<PerformanceAnomalyBackgroundService> _logger;
+
+    public PerformanceAnomalyBackgroundService(
+        PerformanceAnomalyDetector detector,
+        IOptionsMonitor<AnomalyDetectionOptions> optionsMonitor,
+        TimeProvider timeProvider,
+        ILogger<PerformanceAnomalyBackgroundService> logger)
+    {
+        _detector = detector;
+        _optionsMonitor = optionsMonitor;
+        _timeProvider = timeProvider;
+        _logger = logger;
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var options = optionsMonitor.CurrentValue;
+        var options = _optionsMonitor.CurrentValue;
         if (!options.Enabled)
         {
-            logger.LogInformation("Performance anomaly detection is disabled");
+            _logger.LogInformation("Performance anomaly detection is disabled");
             return;
         }
 
-        logger.LogInformation(
+        _logger.LogInformation(
             "Performance anomaly detection started: every {IntervalSeconds}s, window {WindowMinutes}min, threshold {ThresholdPercent}%",
             options.IntervalSeconds, options.WindowMinutes, options.ThresholdPercent);
 
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Math.Max(1, options.IntervalSeconds)), timeProvider);
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Math.Max(1, options.IntervalSeconds)), _timeProvider);
 
         try
         {
@@ -47,18 +60,18 @@ public sealed class PerformanceAnomalyBackgroundService(
     {
         try
         {
-            foreach (var anomaly in detector.Detect())
+            foreach (var anomaly in _detector.Detect())
             {
-                logger.LogWarning(
+                _logger.LogWarning(
                     "Performance anomaly detected for {ApiName}: average over the last {WindowMinutes} min is {RecentAverageMs} ms " +
                     "({RecentRequestCount} requests) vs overall average {OverallAverageMs} ms (+{DeviationPercent}%)",
-                    anomaly.ApiName, optionsMonitor.CurrentValue.WindowMinutes, anomaly.RecentAverageMs,
+                    anomaly.ApiName, _optionsMonitor.CurrentValue.WindowMinutes, anomaly.RecentAverageMs,
                     anomaly.RecentRequestCount, anomaly.OverallAverageMs, anomaly.DeviationPercent);
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Performance anomaly analysis failed");
+            _logger.LogError(ex, "Performance anomaly analysis failed");
         }
     }
 }

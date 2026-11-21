@@ -7,7 +7,7 @@ namespace API_Aggregation.UnitTests.Mapping;
 
 public class AggregationMapperTests
 {
-    private readonly AggregationMapper _mapper = new();
+    private readonly AggregationMapper _mapper = new AggregationMapper();
 
     [Fact]
     public void ToDto_MapsAnAggregatedItem_IncludingEnumAsNameAndMetadata()

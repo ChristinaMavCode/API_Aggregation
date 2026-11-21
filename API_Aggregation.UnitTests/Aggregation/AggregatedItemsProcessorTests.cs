@@ -5,7 +5,7 @@ namespace API_Aggregation.UnitTests.Aggregation;
 
 public class AggregatedItemsProcessorTests
 {
-    private static readonly DateTimeOffset Day1 = new(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset Day1 = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<API_Aggregation.Domain.Aggregation.AggregatedItem> Data =
     [

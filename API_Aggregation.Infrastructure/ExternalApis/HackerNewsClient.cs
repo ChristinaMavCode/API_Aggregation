@@ -10,10 +10,14 @@ namespace API_Aggregation.Infrastructure.ExternalApis;
 /// <summary>
 /// Hacker News stories through the Algolia search API (https://hn.algolia.com/api). No API key required.
 /// </summary>
-public sealed class HackerNewsClient(HttpClient httpClient, IOptionsMonitor<ExternalApiOptions> optionsMonitor)
-    : ExternalApiClientBase(httpClient, optionsMonitor)
+public sealed class HackerNewsClient : ExternalApiClientBase
 {
     public const string ApiName = "HackerNews";
+
+    public HackerNewsClient(HttpClient httpClient, IOptionsMonitor<ExternalApiOptions> optionsMonitor)
+        : base(httpClient, optionsMonitor)
+    {
+    }
 
     public override string Name => ApiName;
 

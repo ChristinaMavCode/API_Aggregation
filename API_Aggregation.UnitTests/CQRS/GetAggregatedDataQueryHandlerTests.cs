@@ -10,10 +10,10 @@ namespace API_Aggregation.UnitTests.CQRS;
 
 public class GetAggregatedDataQueryHandlerTests
 {
-    private readonly FakeApiClient _weather = new("Weather1", ItemCategory.Weather);
-    private readonly FakeApiClient _news = new("News1", ItemCategory.News);
-    private readonly FakeApiClient _repos = new("Repos1", ItemCategory.Repository);
-    private readonly Mock<IExternalApiFetcher> _fetcher = new();
+    private readonly FakeApiClient _weather = new FakeApiClient("Weather1", ItemCategory.Weather);
+    private readonly FakeApiClient _news = new FakeApiClient("News1", ItemCategory.News);
+    private readonly FakeApiClient _repos = new FakeApiClient("Repos1", ItemCategory.Repository);
+    private readonly Mock<IExternalApiFetcher> _fetcher = new Mock<IExternalApiFetcher>();
 
     public GetAggregatedDataQueryHandlerTests()
     {
@@ -25,7 +25,7 @@ public class GetAggregatedDataQueryHandlerTests
     }
 
     private GetAggregatedDataQueryHandler CreateHandler(IExternalApiFetcher? fetcher = null) =>
-        new([_weather, _news, _repos], fetcher ?? _fetcher.Object, new AggregationMapper(), new FakeTimeProvider());
+        new GetAggregatedDataQueryHandler([_weather, _news, _repos], fetcher ?? _fetcher.Object, new AggregationMapper(), new FakeTimeProvider());
 
     [Fact]
     public async Task Handle_AggregatesItemsFromAllApis()

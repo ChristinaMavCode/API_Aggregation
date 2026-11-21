@@ -15,15 +15,24 @@ public sealed record PerformanceAnomaly(
 /// Detects APIs whose average response time over the recent window (default 5 minutes)
 /// is more than <see cref="AnomalyDetectionOptions.ThresholdPercent"/> above their overall average.
 /// </summary>
-public sealed class PerformanceAnomalyDetector(IApiStatisticsStore statistics, IOptionsMonitor<AnomalyDetectionOptions> optionsMonitor)
+public sealed class PerformanceAnomalyDetector
 {
+    private readonly IApiStatisticsStore _statistics;
+    private readonly IOptionsMonitor<AnomalyDetectionOptions> _optionsMonitor;
+
+    public PerformanceAnomalyDetector(IApiStatisticsStore statistics, IOptionsMonitor<AnomalyDetectionOptions> optionsMonitor)
+    {
+        _statistics = statistics;
+        _optionsMonitor = optionsMonitor;
+    }
+
     public IReadOnlyList<PerformanceAnomaly> Detect()
     {
-        var options = optionsMonitor.CurrentValue;
+        var options = _optionsMonitor.CurrentValue;
         var window = TimeSpan.FromMinutes(options.WindowMinutes);
         var anomalies = new List<PerformanceAnomaly>();
 
-        foreach (var summary in statistics.GetPerformanceSummaries(window))
+        foreach (var summary in _statistics.GetPerformanceSummaries(window))
         {
             if (summary.RecentRequestCount < options.MinimumSamples || summary.OverallAverageMs <= 0)
                 continue;

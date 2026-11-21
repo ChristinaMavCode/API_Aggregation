@@ -8,7 +8,7 @@ namespace API_Aggregation.UnitTests.CQRS;
 public class ValidationBehaviorTests
 {
     private readonly ValidationBehavior<GetAggregatedDataQuery, AggregationResponseDto> _behavior =
-        new([new GetAggregatedDataQueryValidator()]);
+        new ValidationBehavior<GetAggregatedDataQuery, AggregationResponseDto>([new GetAggregatedDataQueryValidator()]);
 
     [Fact]
     public async Task Handle_Throws_AndDoesNotCallTheHandler_WhenTheRequestIsInvalid()

@@ -13,10 +13,14 @@ namespace API_Aggregation.Infrastructure.ExternalApis;
 /// GitHub repository search (https://docs.github.com/en/rest/search). Works without a token
 /// (low rate limit); a personal access token can be configured as the API key.
 /// </summary>
-public sealed class GitHubClient(HttpClient httpClient, IOptionsMonitor<ExternalApiOptions> optionsMonitor)
-    : ExternalApiClientBase(httpClient, optionsMonitor)
+public sealed class GitHubClient : ExternalApiClientBase
 {
     public const string ApiName = "GitHub";
+
+    public GitHubClient(HttpClient httpClient, IOptionsMonitor<ExternalApiOptions> optionsMonitor)
+        : base(httpClient, optionsMonitor)
+    {
+    }
 
     public override string Name => ApiName;
 

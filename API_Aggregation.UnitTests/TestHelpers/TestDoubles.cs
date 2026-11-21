@@ -7,9 +7,15 @@ using Microsoft.Extensions.Options;
 namespace API_Aggregation.UnitTests.TestHelpers;
 
 /// <summary>Simple <see cref="IOptionsMonitor{TOptions}"/> supporting named options.</summary>
-public sealed class TestOptionsMonitor<T>(T defaultValue) : IOptionsMonitor<T> where T : class
+public sealed class TestOptionsMonitor<T> : IOptionsMonitor<T> where T : class
 {
-    private readonly Dictionary<string, T> _named = new(StringComparer.OrdinalIgnoreCase);
+    private readonly T _defaultValue;
+    private readonly Dictionary<string, T> _named = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+
+    public TestOptionsMonitor(T defaultValue)
+    {
+        _defaultValue = defaultValue;
+    }
 
     public TestOptionsMonitor<T> With(string name, T value)
     {
@@ -17,39 +23,52 @@ public sealed class TestOptionsMonitor<T>(T defaultValue) : IOptionsMonitor<T> w
         return this;
     }
 
-    public T CurrentValue => defaultValue;
+    public T CurrentValue => _defaultValue;
 
-    public T Get(string? name) => name is not null && _named.TryGetValue(name, out var value) ? value : defaultValue;
+    public T Get(string? name) => name is not null && _named.TryGetValue(name, out var value) ? value : _defaultValue;
 
     public IDisposable? OnChange(Action<T, string?> listener) => null;
 }
 
 /// <summary>Stub HTTP handler that answers with a callback and records the requests.</summary>
-public sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
+public sealed class StubHttpMessageHandler : HttpMessageHandler
 {
+    private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+
+    public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
+    {
+        _responder = responder;
+    }
+
     public List<Uri> Requests { get; } = [];
 
     public static StubHttpMessageHandler Json(string json, HttpStatusCode status = HttpStatusCode.OK) =>
-        new(_ => JsonResponse(json, status));
+        new StubHttpMessageHandler(_ => JsonResponse(json, status));
 
     public static HttpResponseMessage JsonResponse(string json, HttpStatusCode status = HttpStatusCode.OK) =>
-        new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
+        new HttpResponseMessage(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Requests.Add(request.RequestUri!);
-        return Task.FromResult(responder(request));
+        return Task.FromResult(_responder(request));
     }
 }
 
 /// <summary>Configurable fake external API client.</summary>
-public sealed class FakeApiClient(string name, ItemCategory category = ItemCategory.News) : IExternalApiClient
+public sealed class FakeApiClient : IExternalApiClient
 {
     private int _callCount;
 
-    public string Name { get; } = name;
+    public FakeApiClient(string name, ItemCategory category = ItemCategory.News)
+    {
+        Name = name;
+        Category = category;
+    }
 
-    public ItemCategory Category { get; } = category;
+    public string Name { get; }
+
+    public ItemCategory Category { get; }
 
     public Func<ExternalApiRequest, CancellationToken, Task<IReadOnlyList<AggregatedItem>>> Handler { get; set; } =
         (_, _) => Task.FromResult<IReadOnlyList<AggregatedItem>>([]);
@@ -87,7 +106,7 @@ public static class Items
         ItemCategory category = ItemCategory.News,
         DateTimeOffset? timestamp = null,
         double relevance = 0.5,
-        string? description = null) => new()
+        string? description = null) => new AggregatedItem
     {
         Source = source,
         Category = category,

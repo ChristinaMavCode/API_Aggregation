@@ -3,7 +3,9 @@ using API_Aggregation.Application.Options;
 using API_Aggregation.Infrastructure.ExternalApis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
 
 namespace API_Aggregation.Infrastructure.Configurations;
 
@@ -14,6 +16,7 @@ public static class ExternalApisConfiguration
     public static IServiceCollection AddExternalApis(this IServiceCollection services, IConfiguration configuration)
     {
         // Adding a new API = one IExternalApiClient implementation + one line here + one config section.
+        // An API whose ExternalApis:{Name} section is missing from the configuration is skipped.
         services.AddExternalApiClient<OpenMeteoClient>(OpenMeteoClient.ApiName, configuration);
         services.AddExternalApiClient<HackerNewsClient>(HackerNewsClient.ApiName, configuration);
         services.AddExternalApiClient<GitHubClient>(GitHubClient.ApiName, configuration);
@@ -31,7 +34,16 @@ public static class ExternalApisConfiguration
         where TClient : class, IExternalApiClient
     {
         var section = configuration.GetSection($"{ExternalApiOptions.SectionName}:{name}");
-        services.AddOptions<ExternalApiOptions>(name).Bind(section);
+
+        // An API without a configuration section is simply not used: it is not registered at all.
+        if (!section.Exists())
+            return services;
+
+        // A present but invalid section (e.g. bad URL, MaxItems = 0) stops the app at startup with a clear message.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<ExternalApiOptions>, ExternalApiOptionsValidator>());
+        services.AddOptions<ExternalApiOptions>(name)
+            .Bind(section)
+            .ValidateOnStart();
 
         var options = section.Get<ExternalApiOptions>() ?? new ExternalApiOptions();
 

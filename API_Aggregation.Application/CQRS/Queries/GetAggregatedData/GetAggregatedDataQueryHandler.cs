@@ -7,12 +7,25 @@ using MediatR;
 
 namespace API_Aggregation.Application.CQRS.Queries.GetAggregatedData;
 
-public sealed class GetAggregatedDataQueryHandler(
-    IEnumerable<IExternalApiClient> clients,
-    IExternalApiFetcher fetcher,
-    AggregationMapper mapper,
-    TimeProvider timeProvider) : IRequestHandler<GetAggregatedDataQuery, AggregationResponseDto>
+public sealed class GetAggregatedDataQueryHandler : IRequestHandler<GetAggregatedDataQuery, AggregationResponseDto>
 {
+    private readonly IEnumerable<IExternalApiClient> _clients;
+    private readonly IExternalApiFetcher _fetcher;
+    private readonly AggregationMapper _mapper;
+    private readonly TimeProvider _timeProvider;
+
+    public GetAggregatedDataQueryHandler(
+        IEnumerable<IExternalApiClient> clients,
+        IExternalApiFetcher fetcher,
+        AggregationMapper mapper,
+        TimeProvider timeProvider)
+    {
+        _clients = clients;
+        _fetcher = fetcher;
+        _mapper = mapper;
+        _timeProvider = timeProvider;
+    }
+
     public async Task<AggregationResponseDto> Handle(GetAggregatedDataQuery query, CancellationToken cancellationToken)
     {
         var city = query.City!.Trim();
@@ -23,7 +36,7 @@ public sealed class GetAggregatedDataQueryHandler(
 
         // All selected APIs are queried in parallel. The fetcher never throws for API failures,
         // so one failing API cannot break the whole response.
-        var results = await Task.WhenAll(selectedClients.Select(c => fetcher.FetchAsync(c, request, cancellationToken)));
+        var results = await Task.WhenAll(selectedClients.Select(c => _fetcher.FetchAsync(c, request, cancellationToken)));
 
         var criteria = new AggregationCriteria
         {
@@ -42,13 +55,13 @@ public sealed class GetAggregatedDataQueryHandler(
         {
             City = city,
             Topic = topic,
-            GeneratedAt = timeProvider.GetUtcNow(),
+            GeneratedAt = _timeProvider.GetUtcNow(),
             TotalItems = page.TotalItems,
             Page = criteria.Page,
             PageSize = criteria.PageSize,
             TotalPages = (int)Math.Ceiling(page.TotalItems / (double)criteria.PageSize),
-            Sources = mapper.ToDtos(results),
-            Items = mapper.ToDtos(page.Items)
+            Sources = _mapper.ToDtos(results),
+            Items = _mapper.ToDtos(page.Items)
         };
     }
 
@@ -66,7 +79,7 @@ public sealed class GetAggregatedDataQueryHandler(
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        return clients.Where(c =>
+        return _clients.Where(c =>
             (category is null || c.Category == category) &&
             (sources.Count == 0 || sources.Contains(c.Name)));
     }

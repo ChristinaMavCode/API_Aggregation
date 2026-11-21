@@ -13,12 +13,12 @@ namespace API_Aggregation.UnitTests.Aggregation;
 
 public class ExternalApiFetcherTests
 {
-    private static readonly ExternalApiRequest Request = new("Athens", "dotnet");
+    private static readonly ExternalApiRequest Request = new ExternalApiRequest("Athens", "dotnet");
 
-    private readonly TestSystemClock _cacheClock = new();
+    private readonly TestSystemClock _cacheClock = new TestSystemClock();
     private readonly MemoryCache _cache;
-    private readonly Mock<IApiStatisticsStore> _statistics = new();
-    private readonly ExternalApiOptions _options = new() { CacheDurationSeconds = 60, StaleCacheDurationMinutes = 30 };
+    private readonly Mock<IApiStatisticsStore> _statistics = new Mock<IApiStatisticsStore>();
+    private readonly ExternalApiOptions _options = new ExternalApiOptions { CacheDurationSeconds = 60, StaleCacheDurationMinutes = 30 };
     private readonly ExternalApiFetcher _fetcher;
 
     public ExternalApiFetcherTests()
@@ -174,7 +174,7 @@ public class ExternalApiFetcherTests
 
     private sealed class TestSystemClock : ISystemClock
     {
-        public DateTimeOffset UtcNow { get; private set; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        public DateTimeOffset UtcNow { get; private set; } = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
         public void Advance(TimeSpan by) => UtcNow += by;
     }

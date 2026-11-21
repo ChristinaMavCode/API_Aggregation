@@ -11,11 +11,18 @@ namespace API_Aggregation.Infrastructure.ExternalApis;
 /// Open-Meteo daily forecast (https://open-meteo.com). No API key required.
 /// The city is first resolved to coordinates with the Open-Meteo geocoding API.
 /// </summary>
-public sealed class OpenMeteoClient(HttpClient httpClient, IOptionsMonitor<ExternalApiOptions> optionsMonitor, TimeProvider timeProvider)
-    : ExternalApiClientBase(httpClient, optionsMonitor)
+public sealed class OpenMeteoClient : ExternalApiClientBase
 {
     public const string ApiName = "OpenMeteo";
     private const string DefaultGeocodingUrl = "https://geocoding-api.open-meteo.com/v1/search";
+
+    private readonly TimeProvider _timeProvider;
+
+    public OpenMeteoClient(HttpClient httpClient, IOptionsMonitor<ExternalApiOptions> optionsMonitor, TimeProvider timeProvider)
+        : base(httpClient, optionsMonitor)
+    {
+        _timeProvider = timeProvider;
+    }
 
     public override string Name => ApiName;
 
@@ -47,7 +54,7 @@ public sealed class OpenMeteoClient(HttpClient httpClient, IOptionsMonitor<Exter
         if (daily?.Time is null)
             return [];
 
-        var now = timeProvider.GetUtcNow();
+        var now = _timeProvider.GetUtcNow();
         var offset = TimeSpan.FromSeconds(forecast!.UtcOffsetSeconds);
         var url = $"https://open-meteo.com/en/docs#latitude={lat}&longitude={lon}";
         var items = new List<AggregatedItem>(daily.Time.Count);

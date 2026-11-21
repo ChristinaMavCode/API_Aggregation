@@ -4,7 +4,7 @@ namespace API_Aggregation.UnitTests.CQRS;
 
 public class GetAggregatedDataQueryValidatorTests
 {
-    private readonly GetAggregatedDataQueryValidator _validator = new();
+    private readonly GetAggregatedDataQueryValidator _validator = new GetAggregatedDataQueryValidator();
 
     [Fact]
     public void Validate_Succeeds_ForAFullyPopulatedValidQuery()

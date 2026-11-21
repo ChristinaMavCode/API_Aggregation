@@ -19,7 +19,7 @@ public sealed class JwtTokenService : ITokenService
         _options = options;
         _timeProvider = timeProvider;
     }
-    private static readonly JsonWebTokenHandler TokenHandler = new();
+    private static readonly JsonWebTokenHandler TokenHandler = new JsonWebTokenHandler();
 
     public TokenResponseDto CreateToken(string username)
     {

@@ -8,8 +8,8 @@ namespace API_Aggregation.UnitTests.Statistics;
 
 public class InMemoryApiStatisticsStoreTests
 {
-    private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
-    private readonly StatisticsOptions _options = new() { FastThresholdMs = 100, SlowThresholdMs = 200, SampleRetentionMinutes = 60, MaxSamplesPerApi = 1000 };
+    private readonly FakeTimeProvider _time = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+    private readonly StatisticsOptions _options = new StatisticsOptions { FastThresholdMs = 100, SlowThresholdMs = 200, SampleRetentionMinutes = 60, MaxSamplesPerApi = 1000 };
     private readonly InMemoryApiStatisticsStore _store;
 
     public InMemoryApiStatisticsStoreTests()
