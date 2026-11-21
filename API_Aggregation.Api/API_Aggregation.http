@@ -1,0 +1,12 @@
+@HostAddress = http://localhost:5281
+@Version = v1
+
+### login
+POST {{HostAddress}}/api/{{Version}}/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "chm",
+  "password": "tmc_chm_pass"
+}
