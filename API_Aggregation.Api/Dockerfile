@@ -1,29 +1,29 @@
+# Build from the repository root:
+#   docker build -f API_Aggregation.Api/Dockerfile -t api-aggregation .
+#   docker run -p 8080:8080 -e ExternalApis__OpenWeatherMap__ApiKey=<key> api-aggregation
+
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /backend
+WORKDIR /src
 
-COPY API_Aggregation/*.sln ./
+COPY API_Aggregation.sln ./
+COPY API_Aggregation.Api/API_Aggregation.Api.csproj API_Aggregation.Api/
+COPY API_Aggregation.Application/API_Aggregation.Application.csproj API_Aggregation.Application/
+COPY API_Aggregation.Domain/API_Aggregation.Domain.csproj API_Aggregation.Domain/
+COPY API_Aggregation.Infrastructure/API_Aggregation.Infrastructure.csproj API_Aggregation.Infrastructure/
 
-COPY API_Aggregation/API_Aggregation.Api/API_Aggregation.Api.csproj API_Aggregation/API_Aggregation.Api/
-COPY API_Aggregation/API_Aggregation.Application/API_Aggregation.Application.csproj API_Aggregation/API_Aggregation.Application/
-COPY API_Aggregation/API_Aggregation.Domain/API_Aggregation.Domain.csproj API_Aggregation/API_Aggregation.Domain/
-COPY API_Aggregation/API_Aggregation.Infrastructure/API_Aggregation.Infrastructure.csproj API_Aggregation/API_Aggregation.Infrastructure/
-COPY API_Aggregation/API_Aggregation.UnitTests/API_Aggregation.UnitTests.csproj API_Aggregation/API_Aggregation.UnitTests/
-
-RUN dotnet restore API_Aggregation/API_Aggregation.Api/API_Aggregation.Api.csproj
+RUN dotnet restore API_Aggregation.Api/API_Aggregation.Api.csproj
 
 COPY . .
 
-WORKDIR /backend/API_Aggregation/API_Aggregation.Api
-
-RUN dotnet publish -c Debug -o /app/publish
+RUN dotnet publish API_Aggregation.Api/API_Aggregation.Api.csproj -c Release -o /app/publish --no-restore
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+ENV Kestrel__Endpoints__Http__Url=http://+:8080
 USER app
-EXPOSE 80
-EXPOSE 443
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "API_Aggregation.Api.dll"]

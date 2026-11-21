@@ -23,13 +23,25 @@ public class ValidationExceptionMiddleware
         }
         catch (ValidationException ex)
         {
-            _logger.LogError(ex, "Validation failed: " + ex.Errors.Select(e => e.ErrorMessage));
+            var errorMessages = string.Join(", ", ex.Errors.Select(e => e.ErrorMessage));
+            _logger.LogWarning("Validation failed: {Errors}", errorMessages);
 
-            context.Response.ContentType = "application/problem+json";
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
 
-            var errorMessages = string.Join(", ", ex.Errors.Select(e => e.ErrorMessage));
-            await context.Response.WriteAsJsonAsync(new { detail = "Validation failed: " + errorMessages });
+            var errors = ex.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+            await context.Response.WriteAsJsonAsync(
+                new
+                {
+                    title = "One or more validation errors occurred.",
+                    status = StatusCodes.Status400BadRequest,
+                    detail = "Validation failed: " + errorMessages,
+                    errors
+                },
+                options: null,
+                contentType: "application/problem+json");
         }
     }
 }

@@ -1,12 +1,50 @@
 @HostAddress = http://localhost:5281
 @Version = v1
 
-### login
-POST {{HostAddress}}/api/{{Version}}/login
+### 1. Obtain a JWT token (the token is captured and reused by the requests below)
+# @name login
+POST {{HostAddress}}/api/{{Version}}/auth/token
 Content-Type: application/json
 Accept: application/json
 
 {
-  "username": "chm",
-  "password": "tmc_chm_pass"
+  "username": "demo",
+  "password": "demo-password"
 }
+
+### 2. Aggregated data for a city (all APIs, newest first)
+GET {{HostAddress}}/api/{{Version}}/aggregation?city=Athens
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: application/json
+
+### 3. Weather only, next 3 days, ordered by date ascending
+GET {{HostAddress}}/api/{{Version}}/aggregation?city=Thessaloniki&category=Weather&from=2026-11-21&to=2026-11-24&sortBy=date&sortOrder=asc
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: application/json
+
+### 4. News + repositories about a topic, ordered by relevance, page 2
+GET {{HostAddress}}/api/{{Version}}/aggregation?city=Athens&topic=dotnet&sources=HackerNews,GitHub&sortBy=relevance&page=2&pageSize=10
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: application/json
+
+### 5. Text search inside the aggregated items
+GET {{HostAddress}}/api/{{Version}}/aggregation?city=London&search=rain
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: application/json
+
+### 6. Validation error (missing city, invalid sortBy) -> 400
+GET {{HostAddress}}/api/{{Version}}/aggregation?sortBy=popularity
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: application/json
+
+### 7. Request statistics per external API
+GET {{HostAddress}}/api/{{Version}}/statistics
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: application/json
+
+### 8. Without a token -> 401
+GET {{HostAddress}}/api/{{Version}}/statistics
+Accept: application/json
+
+### 9. Health
+GET {{HostAddress}}/health
