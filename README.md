@@ -24,18 +24,34 @@ dotnet test                                   # 102 unit tests
 * OpenAPI document: <http://localhost:5281/openapi/v1.json> (Development only; can be imported into Postman)
 * Ready-made requests: [`API_Aggregation.Api/API_Aggregation.http`](API_Aggregation.Api/API_Aggregation.http) (VS / VS Code / Rider)
 
-Docker (from the repository root):
+### Run with Docker Compose (API + Jaeger tracing)
+
+No .NET SDK needed; from the repository root:
 
 ```bash
-docker build -f API_Aggregation.Api/Dockerfile -t api-aggregation .
-docker run -p 8080:8080 api-aggregation
+docker compose up --build
 ```
+
+| | URL |
+|---|---|
+| API | <http://localhost:8080> (e.g. `POST /api/v1/auth/token`, `GET /api/v1/aggregation?city=Athens`) |
+| Jaeger UI | <http://localhost:16686>, service `API_Aggregation-api` |
+
+In Jaeger, each `GET /api/v1/aggregation` request appears as one trace, with the calls to the external APIs as child spans running **in parallel**. The compose file sets `OpenTelemetry__OtlpEndpoint=http://jaeger:4317` (inside the Docker network Jaeger is reached by its service name) and runs the API in the `Development` environment so `/openapi/v1.json` is available. Stop everything with `docker compose down`.
+
+To use the `.http` file against the container, change `@HostAddress` to `http://localhost:8080`.
+
+To see traces while running the API with `dotnet run`, start only Jaeger: `docker compose up jaeger` (the API's default `OtlpEndpoint` is `http://localhost:4317`).
+
+> **Note:** antivirus software that inspects HTTPS traffic (e.g. Kaspersky) re-signs certificates with its own root, which Windows trusts but the Linux container does not. Affected external APIs then fail inside Docker with `UntrustedRoot` and are reported as `Unavailable` (the fallback keeps the rest of the response working). Running with `dotnet run`, or excluding the site from HTTPS scanning, avoids it.
 
 ---
 
 ## Endpoints
 
-All business endpoints are versioned (`/api/v1/...`) and, except for the token endpoint, require `Authorization: Bearer <token>`.
+All business endpoints are versioned (`/api/v1/...`) and, except for the token endpoint, require `Authorization: Bearer <token>`. A missing, invalid or expired token returns `401 Unauthorized`.
+
+Request and response bodies are JSON with camelCase property names; dates are ISO 8601 (`2026-11-21T09:46:34+00:00`).
 
 ### `POST /api/v1/auth/token` – obtain a JWT
 
@@ -242,6 +258,9 @@ Performance anomaly detected for GitHub: average over the last 5 min is 812.4 ms
 | `Jwt` | `Key`, `Issuer`, `Audience`, `ExpiryMinutes` |
 | `Auth:Users` | Demo credentials (`demo` / `demo-password`) |
 | `OpenTelemetry:OtlpEndpoint` | OTLP/gRPC endpoint of Jaeger (or any OTLP collector). Default `http://localhost:4317`; in Docker Compose use the service name, e.g. `http://jaeger:4317`. Set to empty to disable exporting. |
+| `Kestrel:Endpoints:Http:Url` | Listening address, `http://localhost:5281` (the Docker image overrides it to `http://+:8080`) |
+| `Cors:AllowedOrigins` | Origins allowed to call the API from a browser |
+| `Serilog` | Logging (console, compact JSON) |
 
 Any value can be overridden with environment variables, e.g. `ExternalApis__GitHub__ApiKey=...`.
 
@@ -264,3 +283,4 @@ An API is only used when its `ExternalApis:<Name>` section exists: remove (or om
 | API clients | payload mapping for all three APIs via a stubbed `HttpMessageHandler`, 404 handling, server errors |
 | Auth | token creation and validation, wrong key rejected, credential validation |
 | Mapping | Mapperly mappings (enums as names, item count, buckets) |
+| Configuration | `ExternalApiOptionsValidator` rules, clients skipped when their config section is missing, invalid sections rejected |

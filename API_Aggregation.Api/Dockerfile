@@ -1,6 +1,7 @@
 # Build from the repository root:
 #   docker build -f API_Aggregation.Api/Dockerfile -t api-aggregation .
 #   docker run -p 8080:8080 api-aggregation
+# Or, with Jaeger tracing: docker compose up --build (see docker-compose.yml)
 
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build

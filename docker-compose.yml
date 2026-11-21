@@ -1,0 +1,27 @@
+# Runs the API together with Jaeger (distributed tracing).
+#
+#   docker compose up --build
+#
+#   API:        http://localhost:8080        (e.g. POST /api/v1/auth/token, GET /api/v1/aggregation?city=Athens)
+#   Jaeger UI:  http://localhost:16686       (service "API_Aggregation-api")
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: API_Aggregation.Api/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # Development enables the OpenAPI document (/openapi/v1.json) for this local setup.
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Inside the Docker network Jaeger is reached by its service name, not localhost.
+      - OpenTelemetry__OtlpEndpoint=http://jaeger:4317
+    depends_on:
+      - jaeger
+
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC (also lets an API started with `dotnet run` send traces here)
