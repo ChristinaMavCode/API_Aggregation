@@ -42,10 +42,10 @@ public static class AggregatedItemsProcessor
     {
         var query = items;
 
-        if (criteria.From is { } from)
+        if (criteria.From is DateTimeOffset from)
             query = query.Where(i => i.Timestamp >= from);
 
-        if (criteria.To is { } to)
+        if (criteria.To is DateTimeOffset to)
             query = query.Where(i => i.Timestamp <= to);
 
         if (!string.IsNullOrWhiteSpace(criteria.Search))

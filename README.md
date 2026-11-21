@@ -155,7 +155,7 @@ Buckets: **Fast** `< FastThresholdMs`, **Average** `FastThresholdMs – SlowThre
 Clean-architecture layering with CQRS (MediatR) and minimal API endpoints:
 
 ```
-API_Aggregation.Api             Minimal API endpoints (thin: bind → ISender.Send → result), versioning, OpenAPI
+API_Aggregation.Api             Program.cs: minimal API endpoints (thin: bind → ISender.Send → result), versioning, OpenAPI
         │
 API_Aggregation.Infrastructure  External API clients (typed HttpClient + resilience), in-memory statistics store,
         │                       anomaly background service, JWT token service, DI wiring
@@ -172,7 +172,7 @@ API_Aggregation.Domain          AggregatedItem, SourceResult/SourceStatus, stati
 
 ### Request flow – `GET /aggregation`
 
-1. The endpoint builds a `GetAggregatedDataQuery` and sends it through MediatR.
+1. The endpoint in `Program.cs` binds the query string straight into a `GetAggregatedDataQuery` (`[AsParameters]`) and sends it through MediatR.
 2. `ValidationBehavior` runs the FluentValidation validator → `400` on failure.
 3. The handler **selects the clients** that match `category` / `sources` (APIs whose data would be filtered out are never called).
 4. All selected clients run **in parallel** (`Task.WhenAll`) through `ExternalApiFetcher`:
