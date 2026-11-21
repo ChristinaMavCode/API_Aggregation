@@ -23,7 +23,7 @@ public class PerformanceAnomalyTests
         _detector = new PerformanceAnomalyDetector(_store, new TestOptionsMonitor<AnomalyDetectionOptions>(_anomalyOptions));
     }
 
-    private void Record(string api, int count, double ms)
+    private void _record(string api, int count, double ms)
     {
         for (var i = 0; i < count; i++)
             _store.Record(api, TimeSpan.FromMilliseconds(ms), true);
@@ -32,9 +32,9 @@ public class PerformanceAnomalyTests
     [Fact]
     public void Detect_ReportsAnApi_WhoseRecentAverageIsMoreThan50PercentAboveItsOverallAverage()
     {
-        Record("Slow", 10, 100);          // historical baseline
+        _record("Slow", 10, 100);          // historical baseline
         _time.Advance(TimeSpan.FromMinutes(10));
-        Record("Slow", 3, 400);           // recent spike: overall = 2200/13 ≈ 169ms, recent = 400ms
+        _record("Slow", 3, 400);           // recent spike: overall = 2200/13 ≈ 169ms, recent = 400ms
 
         var anomaly = Assert.Single(_detector.Detect());
 
@@ -48,9 +48,9 @@ public class PerformanceAnomalyTests
     [Fact]
     public void Detect_ReportsNothing_WhenPerformanceIsStable()
     {
-        Record("Stable", 10, 100);
+        _record("Stable", 10, 100);
         _time.Advance(TimeSpan.FromMinutes(10));
-        Record("Stable", 5, 120);
+        _record("Stable", 5, 120);
 
         Assert.Empty(_detector.Detect());
     }
@@ -58,9 +58,9 @@ public class PerformanceAnomalyTests
     [Fact]
     public void Detect_IgnoresTheRecentWindow_WhenItHasTooFewSamples()
     {
-        Record("Api", 10, 100);
+        _record("Api", 10, 100);
         _time.Advance(TimeSpan.FromMinutes(10));
-        Record("Api", 2, 1000);
+        _record("Api", 2, 1000);
 
         Assert.Empty(_detector.Detect());
     }
@@ -68,11 +68,11 @@ public class PerformanceAnomalyTests
     [Fact]
     public void Detect_OnlyReportsTheDegradedApi()
     {
-        Record("Good", 10, 100);
-        Record("Bad", 10, 100);
+        _record("Good", 10, 100);
+        _record("Bad", 10, 100);
         _time.Advance(TimeSpan.FromMinutes(10));
-        Record("Good", 3, 100);
-        Record("Bad", 3, 900);
+        _record("Good", 3, 100);
+        _record("Bad", 3, 900);
 
         Assert.Equal("Bad", Assert.Single(_detector.Detect()).ApiName);
     }
@@ -80,9 +80,9 @@ public class PerformanceAnomalyTests
     [Fact]
     public void BackgroundService_LogsAWarning_ForEveryAnomaly()
     {
-        Record("Slow", 10, 100);
+        _record("Slow", 10, 100);
         _time.Advance(TimeSpan.FromMinutes(10));
-        Record("Slow", 3, 400);
+        _record("Slow", 3, 400);
         var logger = new FakeLogger<PerformanceAnomalyBackgroundService>();
         var service = new PerformanceAnomalyBackgroundService(
             _detector, new TestOptionsMonitor<AnomalyDetectionOptions>(_anomalyOptions), _time, logger);

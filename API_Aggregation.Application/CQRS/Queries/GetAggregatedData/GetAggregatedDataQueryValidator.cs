@@ -19,12 +19,12 @@ public sealed class GetAggregatedDataQueryValidator : AbstractValidator<GetAggre
         RuleFor(q => q.Sources).MaximumLength(500);
 
         RuleFor(q => q.Category)
-            .Must(BeDefinedEnum<ItemCategory>)
+            .Must(_beDefinedEnum<ItemCategory>)
             .When(q => !string.IsNullOrWhiteSpace(q.Category))
             .WithMessage($"'category' must be one of: {string.Join(", ", Enum.GetNames<ItemCategory>())}.");
 
         RuleFor(q => q.SortBy)
-            .Must(BeDefinedEnum<AggregationSortBy>)
+            .Must(_beDefinedEnum<AggregationSortBy>)
             .When(q => !string.IsNullOrWhiteSpace(q.SortBy))
             .WithMessage($"'sortBy' must be one of: {string.Join(", ", Enum.GetNames<AggregationSortBy>())}.");
 
@@ -45,6 +45,6 @@ public sealed class GetAggregatedDataQueryValidator : AbstractValidator<GetAggre
             .WithMessage("'from' must be earlier than or equal to 'to'.");
     }
 
-    private static bool BeDefinedEnum<TEnum>(string? value) where TEnum : struct, Enum =>
+    private static bool _beDefinedEnum<TEnum>(string? value) where TEnum : struct, Enum =>
         Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed);
 }

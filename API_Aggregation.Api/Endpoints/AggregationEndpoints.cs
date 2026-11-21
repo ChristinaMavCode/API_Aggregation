@@ -10,7 +10,7 @@ public static class AggregationEndpoints
 {
     public static RouteGroupBuilder MapAggregationEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/aggregation", GetAggregatedData)
+        group.MapGet("/aggregation", _getAggregatedData)
             .WithName("GetAggregatedData")
             .WithTags("Aggregation")
             .WithSummary("Retrieve aggregated data from all external APIs")
@@ -25,7 +25,7 @@ public static class AggregationEndpoints
         return group;
     }
 
-    private static async Task<Ok<AggregationResponseDto>> GetAggregatedData(
+    private static async Task<Ok<AggregationResponseDto>> _getAggregatedData(
         ISender sender,
         CancellationToken cancellationToken,
         [Description("Location used by the weather APIs, e.g. 'Athens'. Required.")] string? city = null,

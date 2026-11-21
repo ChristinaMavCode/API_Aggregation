@@ -32,7 +32,7 @@ public sealed class GetAggregatedDataQueryHandler : IRequestHandler<GetAggregate
         var topic = string.IsNullOrWhiteSpace(query.Topic) ? city : query.Topic.Trim();
         var request = new ExternalApiRequest(city, topic);
 
-        var selectedClients = SelectClients(query);
+        var selectedClients = _selectClients(query);
 
         // All selected APIs are queried in parallel. The fetcher never throws for API failures,
         // so one failing API cannot break the whole response.
@@ -69,7 +69,7 @@ public sealed class GetAggregatedDataQueryHandler : IRequestHandler<GetAggregate
     /// Category / source filters are applied before calling the APIs so that we never
     /// spend an external call on data that would be filtered out anyway.
     /// </summary>
-    private IEnumerable<IExternalApiClient> SelectClients(GetAggregatedDataQuery query)
+    private IEnumerable<IExternalApiClient> _selectClients(GetAggregatedDataQuery query)
     {
         ItemCategory? category = string.IsNullOrWhiteSpace(query.Category)
             ? null

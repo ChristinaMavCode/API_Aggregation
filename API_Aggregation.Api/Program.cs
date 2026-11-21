@@ -1,9 +1,7 @@
 using System.Text.Json;
 using API_Aggregation.Api.Endpoints;
-using API_Aggregation.Api.OpenApi;
 using API_Aggregation.Infrastructure.Configurations;
 using Asp.Versioning;
-using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,11 +31,7 @@ builder.Services
         o.SubstituteApiVersionInUrl = true;
     });
 
-builder.Services.AddOpenApi("v1", o =>
-{
-    o.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
-    o.AddOperationTransformer<BearerSecurityRequirementTransformer>();
-});
+builder.Services.AddOpenApi("v1");
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? ["http://localhost:5174"];
 builder.Services.AddCors(options =>
@@ -58,8 +52,7 @@ app.UseStatusCodePages();
 
 if (isDevelopment)
 {
-    app.MapOpenApi();                                                  // /openapi/v1.json
-    app.MapScalarApiReference(o => o.WithTitle("API Aggregation"));    // /scalar/v1
+    app.MapOpenApi();   // /openapi/v1.json
 }
 
 app.UseCors();

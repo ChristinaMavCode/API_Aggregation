@@ -22,14 +22,6 @@ public sealed class ExternalApiOptions
     /// <summary>Maximum number of items requested from the API.</summary>
     public int MaxItems { get; set; } = 20;
 
-    /// <summary>Timeout of a single HTTP attempt.</summary>
-    public int AttemptTimeoutSeconds { get; set; } = 5;
-
-    /// <summary>Timeout of the whole operation including retries.</summary>
-    public int TotalTimeoutSeconds { get; set; } = 15;
-
-    public int MaxRetryAttempts { get; set; } = 2;
-
     /// <summary>Free-form, API specific settings (e.g. secondary URLs).</summary>
     public Dictionary<string, string> Settings { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

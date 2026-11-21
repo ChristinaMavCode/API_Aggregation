@@ -1,0 +1,16 @@
+# Code style conventions for this solution.
+
+[*.cs]
+
+# Private methods (static or instance) use a leading underscore and camelCase: _getStaleKey(), _leaveFetch().
+# Overrides the default .NET convention (PascalCase for all methods), so the IDE no longer reports IDE1006
+# for these names and instead flags private methods that do NOT follow this style.
+dotnet_naming_rule.private_methods_underscore.symbols  = private_methods
+dotnet_naming_rule.private_methods_underscore.style    = underscore_camel_case
+dotnet_naming_rule.private_methods_underscore.severity = suggestion
+
+dotnet_naming_symbols.private_methods.applicable_kinds           = method
+dotnet_naming_symbols.private_methods.applicable_accessibilities = private
+
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization  = camel_case

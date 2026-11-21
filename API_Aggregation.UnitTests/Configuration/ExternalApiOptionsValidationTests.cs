@@ -12,11 +12,11 @@ public class ExternalApiOptionsValidationTests
 {
     private readonly ExternalApiOptionsValidator _validator = new ExternalApiOptionsValidator();
 
-    private static ExternalApiOptions Valid() => new ExternalApiOptions { BaseUrl = "https://api.example.com/" };
+    private static ExternalApiOptions _valid() => new ExternalApiOptions { BaseUrl = "https://api.example.com/" };
 
     [Fact]
     public void Validate_Succeeds_ForValidOptions() =>
-        Assert.True(_validator.Validate("Api", Valid()).Succeeded);
+        Assert.True(_validator.Validate("Api", _valid()).Succeeded);
 
     [Fact]
     public void Validate_Fails_WhenBaseUrlIsMissing_AndMentionsTheSection()
@@ -33,7 +33,7 @@ public class ExternalApiOptionsValidationTests
     [InlineData("ftp://api.example.com")]
     public void Validate_Fails_ForAnInvalidBaseUrl(string baseUrl)
     {
-        var options = Valid();
+        var options = _valid();
         options.BaseUrl = baseUrl;
 
         Assert.True(_validator.Validate("Api", options).Failed);
@@ -43,35 +43,15 @@ public class ExternalApiOptionsValidationTests
     [InlineData(nameof(ExternalApiOptions.MaxItems))]
     [InlineData(nameof(ExternalApiOptions.CacheDurationSeconds))]
     [InlineData(nameof(ExternalApiOptions.StaleCacheDurationMinutes))]
-    [InlineData(nameof(ExternalApiOptions.AttemptTimeoutSeconds))]
     public void Validate_Fails_WhenAPositiveValueIsZero(string property)
     {
-        var options = Valid();
+        var options = _valid();
         typeof(ExternalApiOptions).GetProperty(property)!.SetValue(options, 0);
 
         var result = _validator.Validate("Api", options);
 
         Assert.True(result.Failed);
         Assert.Contains(property, result.FailureMessage);
-    }
-
-    [Fact]
-    public void Validate_Fails_WhenTotalTimeoutIsShorterThanTheAttemptTimeout()
-    {
-        var options = Valid();
-        options.AttemptTimeoutSeconds = 10;
-        options.TotalTimeoutSeconds = 5;
-
-        Assert.True(_validator.Validate("Api", options).Failed);
-    }
-
-    [Fact]
-    public void Validate_Fails_ForNegativeRetries()
-    {
-        var options = Valid();
-        options.MaxRetryAttempts = -1;
-
-        Assert.True(_validator.Validate("Api", options).Failed);
     }
 
     [Fact]

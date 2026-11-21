@@ -18,11 +18,10 @@ Prerequisites: [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0).
 
 ```bash
 dotnet run --project API_Aggregation.Api      # http://localhost:5281
-dotnet test                                   # 106 unit tests
+dotnet test                                   # 102 unit tests
 ```
 
-* Interactive API reference (Scalar): <http://localhost:5281/scalar/v1> (Development only)
-* OpenAPI document: <http://localhost:5281/openapi/v1.json>
+* OpenAPI document: <http://localhost:5281/openapi/v1.json> (Development only; can be imported into Postman)
 * Ready-made requests: [`API_Aggregation.Api/API_Aggregation.http`](API_Aggregation.Api/API_Aggregation.http) (VS / VS Code / Rider)
 
 Docker (from the repository root):
@@ -197,7 +196,7 @@ Caching, resilience, fallback, statistics, filtering, sorting, the statistics en
 
 ### Error handling, transient failures and fallback
 
-* **Resilience pipeline** per API (`Microsoft.Extensions.Http.Resilience` / Polly): total timeout → **retry** with exponential back-off + jitter (only transient errors: 5xx, 408, 429, network errors) → **circuit breaker** (stops hammering an API that is down) → per-attempt timeout. All values are configurable per API.
+* **Resilience pipeline** on every API client (`Microsoft.Extensions.Http.Resilience` / Polly, standard handler): total timeout (15 s) → **retry** up to 2 times with exponential back-off + jitter (only transient errors: 5xx, 408, 429, network errors) → **circuit breaker** (stops hammering an API that is down) → per-attempt timeout (5 s). The same settings are used for all APIs (constants in `ExternalApisConfiguration`).
 * **Fallback**: every successful response is also stored in a long-lived *stale* cache entry; it is served when the API fails. If nothing is available the API is reported as `Unavailable` and the other APIs' data is still returned.
 * A `404` from a provider (e.g. unknown city) is treated as "no data", not as an outage.
 * Exception details are logged but never returned to the caller. Unhandled exceptions are returned as RFC 7807 problem details.
@@ -205,13 +204,13 @@ Caching, resilience, fallback, statistics, filtering, sorting, the statistics en
 ### Caching
 
 * `IMemoryCache` per API and per *relevant* parameters: weather clients key on the city only and news/repository clients on the topic only, so changing one parameter doesn't invalidate the others' cache.
-* **Request coalescing**: concurrent identical requests share one in-flight external call (prevents cache stampedes).
+* *Possible improvement for high traffic:* identical requests arriving while the first call is still running each call the API until the result is cached. Request de-duplication (letting them share the running call) would prevent such bursts; it was left out to keep the fetcher simple.
 * Durations are configurable per API (`CacheDurationSeconds`, `StaleCacheDurationMinutes`).
 
 ### Parallelism and async
 
 * All external APIs are called concurrently; the response time is roughly that of the *slowest* API instead of the sum of all.
-* Fully async I/O end to end, with `CancellationToken` propagated from the HTTP request. The shared in-flight call itself is not cancelled by one caller (others may be waiting for it); it is bounded by the resilience total timeout.
+* Fully async I/O end to end, with `CancellationToken` propagated from the HTTP request down to the external calls: if the caller disconnects, the pending external requests are cancelled too.
 * `IHttpClientFactory` typed clients (pooled handlers, no socket exhaustion).
 
 ### Statistics and thread safety
@@ -237,7 +236,7 @@ Performance anomaly detected for GitHub: average over the last 5 min is 812.4 ms
 
 | Section | Key settings |
 |---|---|
-| `ExternalApis:<Name>` | `Enabled`, `BaseUrl`, `ApiKey`, `MaxItems`, `CacheDurationSeconds`, `StaleCacheDurationMinutes`, `AttemptTimeoutSeconds`, `TotalTimeoutSeconds`, `MaxRetryAttempts`, `Settings` (API specific, e.g. `GeocodingUrl`) |
+| `ExternalApis:<Name>` | `Enabled`, `BaseUrl`, `ApiKey`, `MaxItems`, `CacheDurationSeconds`, `StaleCacheDurationMinutes`, `Settings` (API specific, e.g. `GeocodingUrl`) |
 | `Statistics` | `FastThresholdMs` (100), `SlowThresholdMs` (200), `SampleRetentionMinutes`, `MaxSamplesPerApi` |
 | `AnomalyDetection` | `Enabled`, `IntervalSeconds` (60), `WindowMinutes` (5), `ThresholdPercent` (50), `MinimumSamples` (3) |
 | `Jwt` | `Key`, `Issuer`, `Audience`, `ExpiryMinutes` |
@@ -252,11 +251,11 @@ An API is only used when its `ExternalApis:<Name>` section exists: remove (or om
 
 ## Tests
 
-`API_Aggregation.UnitTests` (xUnit v3, Moq, `FakeTimeProvider`, `FakeLogger`): 106 tests, no network access needed.
+`API_Aggregation.UnitTests` (xUnit v3, Moq, `FakeTimeProvider`, `FakeLogger`): 102 tests, no network access needed.
 
 | Area | What is covered |
 |---|---|
-| `ExternalApiFetcher` | live / cached / cache expiry, stale fallback, unavailable, disabled by configuration, statistics recorded only for real calls, request coalescing, cancellation, error details not leaked |
+| `ExternalApiFetcher` | live / cached / cache expiry, stale fallback, unavailable, disabled by configuration, statistics recorded only for real calls, cancellation of the external call, error details not leaked |
 | Query handler | aggregation of all sources, **parallel execution**, category / source selection, topic default, partial failure, sorting & paging |
 | Validation | validators and the MediatR validation pipeline |
 | Filtering / sorting | every sort field and direction, date range, text search, paging edge cases |

@@ -9,7 +9,7 @@ public static class StatisticsEndpoints
 {
     public static RouteGroupBuilder MapStatisticsEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/statistics", GetStatistics)
+        group.MapGet("/statistics", _getStatistics)
             .WithName("GetApiStatistics")
             .WithTags("Statistics")
             .WithSummary("Retrieve request statistics per external API")
@@ -23,6 +23,6 @@ public static class StatisticsEndpoints
         return group;
     }
 
-    private static async Task<Ok<ApiStatisticsResponseDto>> GetStatistics(ISender sender, CancellationToken cancellationToken) =>
+    private static async Task<Ok<ApiStatisticsResponseDto>> _getStatistics(ISender sender, CancellationToken cancellationToken) =>
         TypedResults.Ok(await sender.Send(new GetApiStatisticsQuery(), cancellationToken));
 }

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using API_Aggregation.Application.Abstractions;
 using API_Aggregation.Application.Options;
 using API_Aggregation.Domain.Aggregation;
@@ -12,11 +11,12 @@ namespace API_Aggregation.Application.Aggregation;
 /// Wraps every external API call with:
 /// <list type="number">
 ///   <item>a fresh cache (avoids redundant calls within <see cref="ExternalApiOptions.CacheDuration"/>),</item>
-///   <item>in-flight de-duplication (concurrent identical requests share one external call),</item>
 ///   <item>statistics recording (only real external calls are measured),</item>
 ///   <item>a fallback: if the API fails (after the HTTP resilience pipeline exhausted its retries)
 ///         the last known good response (stale cache) is returned, otherwise an empty, "Unavailable" result.</item>
 /// </list>
+/// The caller's cancellation token is passed to the external call, so if the caller disconnects
+/// the pending HTTP request is cancelled too.
 /// Registered as a singleton; it is thread-safe.
 /// </summary>
 public sealed class ExternalApiFetcher : IExternalApiFetcher
@@ -28,7 +28,6 @@ public sealed class ExternalApiFetcher : IExternalApiFetcher
     private readonly IOptionsMonitor<ExternalApiOptions> _optionsMonitor;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ExternalApiFetcher> _logger;
-    private readonly ConcurrentDictionary<string, Lazy<Task<IReadOnlyList<AggregatedItem>>>> _inFlight = new ConcurrentDictionary<string, Lazy<Task<IReadOnlyList<AggregatedItem>>>>();
 
     public ExternalApiFetcher(
         IMemoryCache cache,
@@ -53,14 +52,19 @@ public sealed class ExternalApiFetcher : IExternalApiFetcher
 
         var cacheKey = $"{client.Name}:{client.GetCacheKey(request)}".ToLowerInvariant();
 
-        if (_cache.TryGetValue(FreshKey(cacheKey), out IReadOnlyList<AggregatedItem>? cachedItems) && cachedItems is not null)
+        if (_cache.TryGetValue(_getFreshKey(cacheKey), out IReadOnlyList<AggregatedItem>? cachedItems) && cachedItems is not null)
             return new SourceResult(client.Name, SourceStatus.Cached, cachedItems, ResponseTimeMs: 0);
 
         var start = _timeProvider.GetTimestamp();
         try
         {
-            var items = await GetOrStartFetch(client, request, cacheKey, options).WaitAsync(cancellationToken);
-            return new SourceResult(client.Name, SourceStatus.Live, items, ElapsedMs(start));
+            var items = await client.FetchAsync(request, cancellationToken);
+            _statistics.Record(client.Name, _timeProvider.GetElapsedTime(start), success: true);
+
+            _cache.Set(_getFreshKey(cacheKey), items, options.CacheDuration);
+            _cache.Set(_getStaleKey(cacheKey), items, options.StaleCacheDuration);
+
+            return new SourceResult(client.Name, SourceStatus.Live, items, _calcElapsedMs(start));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -69,65 +73,31 @@ public sealed class ExternalApiFetcher : IExternalApiFetcher
         }
         catch (Exception ex)
         {
-            if (_cache.TryGetValue(StaleKey(cacheKey), out IReadOnlyList<AggregatedItem>? staleItems) && staleItems is not null)
+            _statistics.Record(client.Name, _timeProvider.GetElapsedTime(start), success: false);
+
+            if (_cache.TryGetValue(_getStaleKey(cacheKey), out IReadOnlyList<AggregatedItem>? staleItems) && staleItems is not null)
             {
                 _logger.LogWarning(ex, "External API {ApiName} failed; serving {Count} stale items as fallback", client.Name, staleItems.Count);
-                return new SourceResult(client.Name, SourceStatus.Stale, staleItems, ElapsedMs(start), UnavailableMessage + " Showing the last known data.");
+                return new SourceResult(client.Name, SourceStatus.Stale, staleItems, _calcElapsedMs(start), UnavailableMessage + " Showing the last known data.");
             }
 
             _logger.LogError(ex, "External API {ApiName} failed and no fallback data is available", client.Name);
-            return new SourceResult(client.Name, SourceStatus.Unavailable, [], ElapsedMs(start), UnavailableMessage);
+            return new SourceResult(client.Name, SourceStatus.Unavailable, [], _calcElapsedMs(start), UnavailableMessage);
         }
     }
 
-    /// <summary>
-    /// Returns the in-flight task for the key or starts a new one. The external call itself is not bound to
-    /// the caller's cancellation token, since other callers may be awaiting the same task; its duration
-    /// is bounded by the HTTP resilience pipeline's total timeout instead.
-    /// </summary>
-    private Task<IReadOnlyList<AggregatedItem>> GetOrStartFetch(IExternalApiClient client, ExternalApiRequest request, string cacheKey, ExternalApiOptions options)
+    private double _calcElapsedMs(long start)
     {
-        var candidate = new Lazy<Task<IReadOnlyList<AggregatedItem>>>(
-            () => FetchAndCacheAsync(client, request, cacheKey, options),
-            LazyThreadSafetyMode.ExecutionAndPublication);
-
-        var lazy = _inFlight.GetOrAdd(cacheKey, candidate);
-
-        if (ReferenceEquals(lazy, candidate))
-        {
-            // We own this fetch: remove it from the in-flight map once it completes (successfully or not).
-            lazy.Value.ContinueWith(
-                _ => _inFlight.TryRemove(new KeyValuePair<string, Lazy<Task<IReadOnlyList<AggregatedItem>>>>(cacheKey, candidate)),
-                CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
-        }
-
-        return lazy.Value;
+        return Math.Round(_timeProvider.GetElapsedTime(start).TotalMilliseconds, 2);
     }
 
-    private async Task<IReadOnlyList<AggregatedItem>> FetchAndCacheAsync(IExternalApiClient client, ExternalApiRequest request, string cacheKey, ExternalApiOptions options)
+    private static string _getFreshKey(string key)
     {
-        var start = _timeProvider.GetTimestamp();
-        try
-        {
-            var items = await client.FetchAsync(request, CancellationToken.None);
-            _statistics.Record(client.Name, _timeProvider.GetElapsedTime(start), success: true);
-
-            _cache.Set(FreshKey(cacheKey), items, options.CacheDuration);
-            _cache.Set(StaleKey(cacheKey), items, options.StaleCacheDuration);
-            return items;
-        }
-        catch
-        {
-            _statistics.Record(client.Name, _timeProvider.GetElapsedTime(start), success: false);
-            throw;
-        }
+        return $"aggregation:fresh:{key}";
     }
 
-    private double ElapsedMs(long start) => Math.Round(_timeProvider.GetElapsedTime(start).TotalMilliseconds, 2);
-
-    private static string FreshKey(string key) => $"aggregation:fresh:{key}";
-
-    private static string StaleKey(string key) => $"aggregation:stale:{key}";
+    private static string _getStaleKey(string key)
+    {
+        return $"aggregation:stale:{key}";
+    }
 }

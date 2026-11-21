@@ -63,11 +63,11 @@ public sealed class OpenMeteoClient : ExternalApiClientBase
         {
             var date = DateTime.ParseExact(daily.Time[i], "yyyy-MM-dd", CultureInfo.InvariantCulture);
             var timestamp = new DateTimeOffset(date, offset);
-            var code = At(daily.WeatherCode, i);
-            var max = At(daily.TemperatureMax, i);
-            var min = At(daily.TemperatureMin, i);
-            var precipitation = At(daily.PrecipitationSum, i);
-            var wind = At(daily.WindSpeedMax, i);
+            var code = _at(daily.WeatherCode, i);
+            var max = _at(daily.TemperatureMax, i);
+            var min = _at(daily.TemperatureMin, i);
+            var precipitation = _at(daily.PrecipitationSum, i);
+            var wind = _at(daily.WindSpeedMax, i);
             var condition = DescribeWeatherCode((int)code);
 
             items.Add(new AggregatedItem
@@ -94,7 +94,7 @@ public sealed class OpenMeteoClient : ExternalApiClientBase
         return items;
     }
 
-    private static double At(List<double?>? values, int index) =>
+    private static double _at(List<double?>? values, int index) =>
         values is not null && index < values.Count ? values[index] ?? 0 : 0;
 
     /// <summary>WMO weather interpretation codes (https://open-meteo.com/en/docs).</summary>

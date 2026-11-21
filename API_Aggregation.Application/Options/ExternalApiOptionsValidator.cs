@@ -33,15 +33,6 @@ public sealed class ExternalApiOptionsValidator : IValidateOptions<ExternalApiOp
         if (options.StaleCacheDurationMinutes < 1)
             errors.Add($"'{section}:StaleCacheDurationMinutes' must be at least 1.");
 
-        if (options.AttemptTimeoutSeconds < 1)
-            errors.Add($"'{section}:AttemptTimeoutSeconds' must be at least 1.");
-
-        if (options.TotalTimeoutSeconds < options.AttemptTimeoutSeconds)
-            errors.Add($"'{section}:TotalTimeoutSeconds' must be greater than or equal to AttemptTimeoutSeconds.");
-
-        if (options.MaxRetryAttempts < 0)
-            errors.Add($"'{section}:MaxRetryAttempts' cannot be negative.");
-
         return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);
     }
 }

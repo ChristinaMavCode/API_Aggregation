@@ -56,7 +56,7 @@ public static class AggregatedItemsProcessor
                 (i.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
         }
 
-        var filtered = Sort(query, criteria.SortBy, criteria.Descending).ToList();
+        var filtered = _sort(query, criteria.SortBy, criteria.Descending).ToList();
 
         var page = filtered
             .Skip((criteria.Page - 1) * criteria.PageSize)
@@ -66,18 +66,18 @@ public static class AggregatedItemsProcessor
         return new AggregationPage(page, filtered.Count);
     }
 
-    private static IOrderedEnumerable<AggregatedItem> Sort(IEnumerable<AggregatedItem> items, AggregationSortBy sortBy, bool descending)
+    private static IOrderedEnumerable<AggregatedItem> _sort(IEnumerable<AggregatedItem> items, AggregationSortBy sortBy, bool descending)
     {
         // A secondary key (timestamp) keeps the ordering deterministic for equal primary keys.
         return sortBy switch
         {
-            AggregationSortBy.Relevance => Order(items, i => i.Relevance, descending).ThenByDescending(i => i.Timestamp),
-            AggregationSortBy.Title => Order(items, i => i.Title, descending, StringComparer.OrdinalIgnoreCase).ThenByDescending(i => i.Timestamp),
-            AggregationSortBy.Source => Order(items, i => i.Source, descending, StringComparer.OrdinalIgnoreCase).ThenByDescending(i => i.Timestamp),
-            _ => Order(items, i => i.Timestamp, descending).ThenBy(i => i.Source, StringComparer.OrdinalIgnoreCase)
+            AggregationSortBy.Relevance => _order(items, i => i.Relevance, descending).ThenByDescending(i => i.Timestamp),
+            AggregationSortBy.Title => _order(items, i => i.Title, descending, StringComparer.OrdinalIgnoreCase).ThenByDescending(i => i.Timestamp),
+            AggregationSortBy.Source => _order(items, i => i.Source, descending, StringComparer.OrdinalIgnoreCase).ThenByDescending(i => i.Timestamp),
+            _ => _order(items, i => i.Timestamp, descending).ThenBy(i => i.Source, StringComparer.OrdinalIgnoreCase)
         };
     }
 
-    private static IOrderedEnumerable<AggregatedItem> Order<TKey>(IEnumerable<AggregatedItem> items, Func<AggregatedItem, TKey> key, bool descending, IComparer<TKey>? comparer = null) =>
+    private static IOrderedEnumerable<AggregatedItem> _order<TKey>(IEnumerable<AggregatedItem> items, Func<AggregatedItem, TKey> key, bool descending, IComparer<TKey>? comparer = null) =>
         descending ? items.OrderByDescending(key, comparer) : items.OrderBy(key, comparer);
 }

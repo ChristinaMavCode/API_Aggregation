@@ -9,7 +9,7 @@ public static class AuthEndpoints
 {
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder group)
     {
-        group.MapPost("/auth/token", CreateToken)
+        group.MapPost("/auth/token", _createToken)
             .WithName("CreateToken")
             .WithTags("Authentication")
             .WithSummary("Obtain a JWT access token")
@@ -20,7 +20,7 @@ public static class AuthEndpoints
         return group;
     }
 
-    private static async Task<Results<Ok<TokenResponseDto>, ProblemHttpResult>> CreateToken(
+    private static async Task<Results<Ok<TokenResponseDto>, ProblemHttpResult>> _createToken(
         GenerateTokenCommand command,
         ISender sender,
         CancellationToken cancellationToken)

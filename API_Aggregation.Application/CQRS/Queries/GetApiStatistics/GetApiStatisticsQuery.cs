@@ -41,7 +41,7 @@ public sealed class GetApiStatisticsQueryHandler : IRequestHandler<GetApiStatist
         {
             if (!snapshots.ContainsKey(client.Name))
             {
-                snapshots.Add(client.Name, Empty(client.Name, options));
+                snapshots.Add(client.Name, _empty(client.Name, options));
             }
         }
 
@@ -56,7 +56,7 @@ public sealed class GetApiStatisticsQueryHandler : IRequestHandler<GetApiStatist
         return Task.FromResult(response);
     }
 
-    private static ApiStatisticsSnapshot Empty(string apiName, StatisticsOptions options)
+    private static ApiStatisticsSnapshot _empty(string apiName, StatisticsOptions options)
     {
         return new ApiStatisticsSnapshot(apiName, 0, 0, 0, Enum.GetValues<PerformanceBucket>()
             .Select(b =>

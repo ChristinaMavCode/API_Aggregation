@@ -17,9 +17,9 @@ public class ExternalApiClientTests
     private static readonly ExternalApiRequest Request = new ExternalApiRequest("Athens", "dotnet");
     private static readonly DateTimeOffset Now = new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero);
 
-    private static HttpClient Http(HttpMessageHandler handler, string baseUrl) => new HttpClient(handler) { BaseAddress = new Uri(baseUrl) };
+    private static HttpClient _http(HttpMessageHandler handler, string baseUrl) => new HttpClient(handler) { BaseAddress = new Uri(baseUrl) };
 
-    private static TestOptionsMonitor<ExternalApiOptions> Options(string name, ExternalApiOptions options) =>
+    private static TestOptionsMonitor<ExternalApiOptions> _options(string name, ExternalApiOptions options) =>
         new TestOptionsMonitor<ExternalApiOptions>(new ExternalApiOptions()).With(name, options);
 
     [Fact]
@@ -41,8 +41,8 @@ public class ExternalApiClientTests
                 }
                 """));
         var client = new OpenMeteoClient(
-            Http(handler, "https://api.open-meteo.com/"),
-            Options(OpenMeteoClient.ApiName, new ExternalApiOptions { MaxItems = 2 }),
+            _http(handler, "https://api.open-meteo.com/"),
+            _options(OpenMeteoClient.ApiName, new ExternalApiOptions { MaxItems = 2 }),
             new FakeTimeProvider(Now));
 
         var items = await client.FetchAsync(Request, CancellationToken.None);
@@ -61,8 +61,8 @@ public class ExternalApiClientTests
     {
         var handler = StubHttpMessageHandler.Json("""{ "generationtime_ms": 0.1 }""");
         var client = new OpenMeteoClient(
-            Http(handler, "https://api.open-meteo.com/"),
-            Options(OpenMeteoClient.ApiName, new ExternalApiOptions()),
+            _http(handler, "https://api.open-meteo.com/"),
+            _options(OpenMeteoClient.ApiName, new ExternalApiOptions()),
             new FakeTimeProvider(Now));
 
         Assert.Empty(await client.FetchAsync(Request, CancellationToken.None));
@@ -92,7 +92,7 @@ public class ExternalApiClientTests
             }
             """;
         var handler = StubHttpMessageHandler.Json(json);
-        var client = new HackerNewsClient(Http(handler, "https://hn.algolia.com/"), Options(HackerNewsClient.ApiName, new ExternalApiOptions { MaxItems = 3 }));
+        var client = new HackerNewsClient(_http(handler, "https://hn.algolia.com/"), _options(HackerNewsClient.ApiName, new ExternalApiOptions { MaxItems = 3 }));
 
         var items = await client.FetchAsync(Request, CancellationToken.None);
 
@@ -121,7 +121,7 @@ public class ExternalApiClientTests
             authorization = req.Headers.Authorization?.ToString();
             return StubHttpMessageHandler.JsonResponse(json);
         });
-        var client = new GitHubClient(Http(handler, "https://api.github.com/"), Options(GitHubClient.ApiName, new ExternalApiOptions { ApiKey = "ghp_token" }));
+        var client = new GitHubClient(_http(handler, "https://api.github.com/"), _options(GitHubClient.ApiName, new ExternalApiOptions { ApiKey = "ghp_token" }));
 
         var items = await client.FetchAsync(Request, CancellationToken.None);
 
@@ -137,8 +137,8 @@ public class ExternalApiClientTests
     public async Task Clients_Throw_OnServerErrors_SoTheFetcherCanApplyTheFallback()
     {
         var client = new HackerNewsClient(
-            Http(StubHttpMessageHandler.Json("{}", HttpStatusCode.ServiceUnavailable), "https://hn.algolia.com/"),
-            Options(HackerNewsClient.ApiName, new ExternalApiOptions()));
+            _http(StubHttpMessageHandler.Json("{}", HttpStatusCode.ServiceUnavailable), "https://hn.algolia.com/"),
+            _options(HackerNewsClient.ApiName, new ExternalApiOptions()));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => client.FetchAsync(Request, CancellationToken.None));
     }
@@ -146,8 +146,8 @@ public class ExternalApiClientTests
     [Fact]
     public void CacheKeys_OnlyDependOnTheParametersTheClientUses()
     {
-        IExternalApiClient weather = new OpenMeteoClient(new HttpClient(), Options("x", new ExternalApiOptions()), TimeProvider.System);
-        IExternalApiClient news = new HackerNewsClient(new HttpClient(), Options("x", new ExternalApiOptions()));
+        IExternalApiClient weather = new OpenMeteoClient(new HttpClient(), _options("x", new ExternalApiOptions()), TimeProvider.System);
+        IExternalApiClient news = new HackerNewsClient(new HttpClient(), _options("x", new ExternalApiOptions()));
 
         Assert.Equal(weather.GetCacheKey(new ExternalApiRequest("Athens", "a")), weather.GetCacheKey(new ExternalApiRequest("Athens", "b")));
         Assert.Equal(news.GetCacheKey(new ExternalApiRequest("Athens", "a")), news.GetCacheKey(new ExternalApiRequest("London", "a")));

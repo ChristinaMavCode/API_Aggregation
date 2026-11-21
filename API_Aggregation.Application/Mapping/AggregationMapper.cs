@@ -25,5 +25,5 @@ public partial class AggregationMapper
 
     public partial IReadOnlyList<ApiStatisticsDto> ToDtos(IEnumerable<ApiStatisticsSnapshot> snapshots);
 
-    private partial BucketStatisticsDto ToDto(BucketStatistics bucket);
+    private partial BucketStatisticsDto _toDto(BucketStatistics bucket);
 }

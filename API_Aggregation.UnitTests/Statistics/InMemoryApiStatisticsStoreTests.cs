@@ -17,7 +17,7 @@ public class InMemoryApiStatisticsStoreTests
         _store = new InMemoryApiStatisticsStore(new TestOptionsMonitor<StatisticsOptions>(_options), _time);
     }
 
-    private static TimeSpan Ms(double ms) => TimeSpan.FromMilliseconds(ms);
+    private static TimeSpan _ms(double ms) => TimeSpan.FromMilliseconds(ms);
 
     [Fact]
     public void GetSnapshots_ReturnsEmpty_WhenNothingWasRecorded() => Assert.Empty(_store.GetSnapshots());
@@ -25,9 +25,9 @@ public class InMemoryApiStatisticsStoreTests
     [Fact]
     public void Record_ComputesTotalsAveragesAndFailures()
     {
-        _store.Record("Api", Ms(50), success: true);
-        _store.Record("Api", Ms(150), success: true);
-        _store.Record("Api", Ms(400), success: false);
+        _store.Record("Api", _ms(50), success: true);
+        _store.Record("Api", _ms(150), success: true);
+        _store.Record("Api", _ms(400), success: false);
 
         var snapshot = Assert.Single(_store.GetSnapshots());
 
@@ -40,11 +40,11 @@ public class InMemoryApiStatisticsStoreTests
     [Fact]
     public void Record_GroupsRequestsIntoPerformanceBuckets()
     {
-        _store.Record("Api", Ms(20), true);
-        _store.Record("Api", Ms(80), true);
-        _store.Record("Api", Ms(100), true);  // boundary -> Average
-        _store.Record("Api", Ms(200), true);  // boundary -> Average
-        _store.Record("Api", Ms(500), true);
+        _store.Record("Api", _ms(20), true);
+        _store.Record("Api", _ms(80), true);
+        _store.Record("Api", _ms(100), true);  // boundary -> Average
+        _store.Record("Api", _ms(200), true);  // boundary -> Average
+        _store.Record("Api", _ms(500), true);
 
         var buckets = Assert.Single(_store.GetSnapshots()).Buckets.ToDictionary(b => b.Bucket);
 
@@ -63,9 +63,9 @@ public class InMemoryApiStatisticsStoreTests
     [Fact]
     public void Record_KeepsApisSeparate_AndTreatsNamesCaseInsensitively()
     {
-        _store.Record("A", Ms(10), true);
-        _store.Record("a", Ms(30), true);
-        _store.Record("B", Ms(300), true);
+        _store.Record("A", _ms(10), true);
+        _store.Record("a", _ms(30), true);
+        _store.Record("B", _ms(300), true);
 
         var snapshots = _store.GetSnapshots();
 
@@ -85,7 +85,7 @@ public class InMemoryApiStatisticsStoreTests
         {
             for (var i = 0; i < perThread; i++)
             {
-                _store.Record(apis[i % apis.Length], Ms(i % 2 == 0 ? 50 : 250), success: i % 10 != 0);
+                _store.Record(apis[i % apis.Length], _ms(i % 2 == 0 ? 50 : 250), success: i % 10 != 0);
                 if (i % 500 == 0)
                     _ = _store.GetSnapshots(); // concurrent readers
             }
@@ -102,10 +102,10 @@ public class InMemoryApiStatisticsStoreTests
     [Fact]
     public void GetPerformanceSummaries_SeparatesRecentWindowFromOverallAverage()
     {
-        _store.Record("Api", Ms(100), true);
-        _store.Record("Api", Ms(100), true);
+        _store.Record("Api", _ms(100), true);
+        _store.Record("Api", _ms(100), true);
         _time.Advance(TimeSpan.FromMinutes(10));
-        _store.Record("Api", Ms(400), true);
+        _store.Record("Api", _ms(400), true);
 
         var summary = Assert.Single(_store.GetPerformanceSummaries(TimeSpan.FromMinutes(5)));
 
@@ -118,7 +118,7 @@ public class InMemoryApiStatisticsStoreTests
     [Fact]
     public void Samples_ArePrunedAfterTheRetentionPeriod_ButTotalsAreKept()
     {
-        _store.Record("Api", Ms(100), true);
+        _store.Record("Api", _ms(100), true);
         _time.Advance(TimeSpan.FromMinutes(61));
 
         var summary = Assert.Single(_store.GetPerformanceSummaries(TimeSpan.FromMinutes(120)));
@@ -132,7 +132,7 @@ public class InMemoryApiStatisticsStoreTests
     {
         _options.MaxSamplesPerApi = 5;
         for (var i = 0; i < 20; i++)
-            _store.Record("Api", Ms(10), true);
+            _store.Record("Api", _ms(10), true);
 
         var summary = Assert.Single(_store.GetPerformanceSummaries(TimeSpan.FromMinutes(5)));
 

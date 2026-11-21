@@ -13,6 +13,11 @@ public static class ExternalApisConfiguration
 {
     private const string UserAgent = "API-Aggregation-Service/1.0";
 
+    // Resilience settings shared by all external APIs.
+    private const int MaxRetryAttempts = 2;
+    private static readonly TimeSpan AttemptTimeout = TimeSpan.FromSeconds(5);   // one HTTP attempt
+    private static readonly TimeSpan TotalTimeout = TimeSpan.FromSeconds(15);    // all attempts together
+
     public static IServiceCollection AddExternalApis(this IServiceCollection services, IConfiguration configuration)
     {
         // Adding a new API = one IExternalApiClient implementation + one line here + one config section.
@@ -25,10 +30,10 @@ public static class ExternalApisConfiguration
     }
 
     /// <summary>
-    /// Registers a typed <see cref="HttpClient"/> for the API together with its named options and a
-    /// resilience pipeline (Polly through Microsoft.Extensions.Http.Resilience):
-    /// rate limiter → total timeout → retry (exponential back-off + jitter, transient errors only:
-    /// 5xx, 408, 429, network failures) → circuit breaker → per-attempt timeout.
+    /// Registers a typed <see cref="HttpClient"/> for the API together with its named options and the
+    /// standard resilience pipeline (Polly through Microsoft.Extensions.Http.Resilience): total timeout →
+    /// retry (exponential back-off + jitter, transient errors only: 5xx, 408, 429, network failures) →
+    /// circuit breaker → per-attempt timeout.
     /// </summary>
     public static IServiceCollection AddExternalApiClient<TClient>(this IServiceCollection services, string name, IConfiguration configuration)
         where TClient : class, IExternalApiClient
@@ -59,17 +64,11 @@ public static class ExternalApisConfiguration
             })
             .AddStandardResilienceHandler(resilience =>
             {
-                var attemptTimeout = TimeSpan.FromSeconds(Math.Max(1, options.AttemptTimeoutSeconds));
-                var totalTimeout = TimeSpan.FromSeconds(Math.Max(options.TotalTimeoutSeconds, options.AttemptTimeoutSeconds));
-
-                resilience.AttemptTimeout.Timeout = attemptTimeout;
-                resilience.TotalRequestTimeout.Timeout = totalTimeout;
-                resilience.Retry.MaxRetryAttempts = Math.Max(0, options.MaxRetryAttempts);
-                resilience.Retry.UseJitter = true;
-                resilience.Retry.Delay = TimeSpan.FromMilliseconds(300);
-                // The circuit breaker sampling window must be at least twice the attempt timeout.
-                resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(Math.Max(30, attemptTimeout.TotalSeconds * 2));
-                resilience.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
+                // Same settings for every API. Everything not set here (exponential back-off with jitter,
+                // circuit breaker, which errors are retried) uses the library's recommended defaults.
+                resilience.AttemptTimeout.Timeout = AttemptTimeout;
+                resilience.TotalRequestTimeout.Timeout = TotalTimeout;
+                resilience.Retry.MaxRetryAttempts = MaxRetryAttempts;
             });
 
         // Expose the typed client through the common abstraction so it's picked up by the aggregation.

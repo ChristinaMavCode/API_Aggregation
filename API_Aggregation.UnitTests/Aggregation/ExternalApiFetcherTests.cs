@@ -130,24 +130,6 @@ public class ExternalApiFetcherTests
         Assert.Equal(0, client.CallCount);
     }
 
-
-    [Fact]
-    public async Task FetchAsync_DeduplicatesConcurrentIdenticalRequests()
-    {
-        var gate = new TaskCompletionSource<IReadOnlyList<AggregatedItem>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var client = new FakeApiClient("Api") { Handler = (_, _) => gate.Task };
-
-        var calls = Enumerable.Range(0, 10)
-            .Select(_ => _fetcher.FetchAsync(client, Request, CancellationToken.None))
-            .ToList();
-
-        gate.SetResult([Items.Create("shared")]);
-        var results = await Task.WhenAll(calls);
-
-        Assert.Equal(1, client.CallCount);
-        Assert.All(results, r => Assert.Equal("shared", Assert.Single(r.Items).Title));
-    }
-
     [Fact]
     public async Task FetchAsync_UsesSeparateCacheEntries_ForDifferentRequests()
     {
@@ -160,16 +142,38 @@ public class ExternalApiFetcherTests
     }
 
     [Fact]
-    public async Task FetchAsync_PropagatesCancellation_RequestedByTheCaller()
+    public async Task FetchAsync_CancelsTheExternalCall_WhenTheCallerGivesUp()
     {
-        var never = new TaskCompletionSource<IReadOnlyList<AggregatedItem>>();
-        var client = new FakeApiClient("Api") { Handler = (_, _) => never.Task };
+        var call = new BlockingCall();
+        var client = new FakeApiClient("Api") { Handler = call.WaitUntilCancelled };
         using var cts = new CancellationTokenSource();
 
         var task = _fetcher.FetchAsync(client, Request, cts.Token);
+        await call.Started;
         await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
+        Assert.True(call.Token.IsCancellationRequested);   // the external call itself was cancelled
+        _statistics.Verify(s => s.Record(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    /// <summary>Simulates an external call that is in progress and records the token it was given.</summary>
+    private sealed class BlockingCall
+    {
+        private readonly TaskCompletionSource _started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task Started => _started.Task;
+
+        public CancellationToken Token { get; private set; }
+
+        /// <summary>Like a real HTTP call: waits until its token is cancelled.</summary>
+        public async Task<IReadOnlyList<AggregatedItem>> WaitUntilCancelled(ExternalApiRequest request, CancellationToken cancellationToken)
+        {
+            Token = cancellationToken;
+            _started.TrySetResult();
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return new List<AggregatedItem>();
+        }
     }
 
     private sealed class TestSystemClock : ISystemClock

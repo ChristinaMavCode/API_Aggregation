@@ -24,7 +24,7 @@ public class GetAggregatedDataQueryHandlerTests
                 new SourceResult(c.Name, SourceStatus.Live, await c.FetchAsync(r, ct), 10));
     }
 
-    private GetAggregatedDataQueryHandler CreateHandler(IExternalApiFetcher? fetcher = null) =>
+    private GetAggregatedDataQueryHandler _createHandler(IExternalApiFetcher? fetcher = null) =>
         new GetAggregatedDataQueryHandler([_weather, _news, _repos], fetcher ?? _fetcher.Object, new AggregationMapper(), new FakeTimeProvider());
 
     [Fact]
@@ -34,7 +34,7 @@ public class GetAggregatedDataQueryHandlerTests
         _news.Returning(Items.Create("n", "News1"));
         _repos.Returning(Items.Create("r", "Repos1", ItemCategory.Repository));
 
-        var result = await CreateHandler().Handle(new GetAggregatedDataQuery("Athens"), CancellationToken.None);
+        var result = await _createHandler().Handle(new GetAggregatedDataQuery("Athens"), CancellationToken.None);
 
         Assert.Equal(3, result.TotalItems);
         Assert.Equal(3, result.Sources.Count);
@@ -60,7 +60,7 @@ public class GetAggregatedDataQueryHandlerTests
             };
         }
 
-        var task = CreateHandler().Handle(new GetAggregatedDataQuery("Athens"), CancellationToken.None);
+        var task = _createHandler().Handle(new GetAggregatedDataQuery("Athens"), CancellationToken.None);
 
         var completed = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
         Assert.Same(task, completed);
@@ -69,7 +69,7 @@ public class GetAggregatedDataQueryHandlerTests
     [Fact]
     public async Task Handle_OnlyCallsApisOfTheRequestedCategory()
     {
-        await CreateHandler().Handle(new GetAggregatedDataQuery("Athens", Category: "weather"), CancellationToken.None);
+        await _createHandler().Handle(new GetAggregatedDataQuery("Athens", Category: "weather"), CancellationToken.None);
 
         Assert.Equal(1, _weather.CallCount);
         Assert.Equal(0, _news.CallCount);
@@ -79,7 +79,7 @@ public class GetAggregatedDataQueryHandlerTests
     [Fact]
     public async Task Handle_OnlyCallsTheRequestedSources()
     {
-        var result = await CreateHandler().Handle(new GetAggregatedDataQuery("Athens", Sources: "news1, REPOS1"), CancellationToken.None);
+        var result = await _createHandler().Handle(new GetAggregatedDataQuery("Athens", Sources: "news1, REPOS1"), CancellationToken.None);
 
         Assert.Equal(0, _weather.CallCount);
         Assert.Equal(1, _news.CallCount);
@@ -90,7 +90,7 @@ public class GetAggregatedDataQueryHandlerTests
     [Fact]
     public async Task Handle_UsesTheCityAsTopic_WhenNoTopicIsGiven()
     {
-        await CreateHandler().Handle(new GetAggregatedDataQuery("  Athens "), CancellationToken.None);
+        await _createHandler().Handle(new GetAggregatedDataQuery("  Athens "), CancellationToken.None);
 
         Assert.Equal(new ExternalApiRequest("Athens", "Athens"), Assert.Single(_news.ReceivedRequests));
     }
@@ -98,7 +98,7 @@ public class GetAggregatedDataQueryHandlerTests
     [Fact]
     public async Task Handle_PassesTheTopic_WhenGiven()
     {
-        await CreateHandler().Handle(new GetAggregatedDataQuery("Athens", Topic: "dotnet"), CancellationToken.None);
+        await _createHandler().Handle(new GetAggregatedDataQuery("Athens", Topic: "dotnet"), CancellationToken.None);
 
         Assert.Equal("dotnet", Assert.Single(_news.ReceivedRequests).Topic);
     }
@@ -111,7 +111,7 @@ public class GetAggregatedDataQueryHandlerTests
             .Setup(f => f.FetchAsync(_weather, It.IsAny<ExternalApiRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SourceResult("Weather1", SourceStatus.Unavailable, [], 5, "down"));
 
-        var result = await CreateHandler().Handle(new GetAggregatedDataQuery("Athens"), CancellationToken.None);
+        var result = await _createHandler().Handle(new GetAggregatedDataQuery("Athens"), CancellationToken.None);
 
         Assert.Equal("n", Assert.Single(result.Items).Title);
         var weather = Assert.Single(result.Sources, s => s.Source == "Weather1");
@@ -127,7 +127,7 @@ public class GetAggregatedDataQueryHandlerTests
             Items.Create("high", "News1", relevance: 0.9),
             Items.Create("mid", "News1", relevance: 0.5));
 
-        var result = await CreateHandler().Handle(
+        var result = await _createHandler().Handle(
             new GetAggregatedDataQuery("Athens", SortBy: "relevance", SortOrder: "desc", Page: 1, PageSize: 2),
             CancellationToken.None);
 

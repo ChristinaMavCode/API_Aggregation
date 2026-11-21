@@ -54,7 +54,7 @@ public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
             accumulator.BucketTotalMs[(int)bucket] += elapsedMs;
 
             accumulator.Samples.Enqueue(new Sample(now, elapsedMs));
-            Prune(accumulator, now, options);
+            _prune(accumulator, now, options);
         }
     }
 
@@ -71,7 +71,7 @@ public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
                     {
                         var (lower, upper) = PerformanceBucketClassifier.GetBounds(b, options);
                         var count = accumulator.BucketCounts[(int)b];
-                        return new BucketStatistics(b, lower, upper, count, Average(accumulator.BucketTotalMs[(int)b], count));
+                        return new BucketStatistics(b, lower, upper, count, _average(accumulator.BucketTotalMs[(int)b], count));
                     })
                     .ToList();
 
@@ -79,7 +79,7 @@ public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
                     accumulator.ApiName,
                     accumulator.TotalRequests,
                     accumulator.FailedRequests,
-                    Average(accumulator.TotalMs, accumulator.TotalRequests),
+                    _average(accumulator.TotalMs, accumulator.TotalRequests),
                     buckets));
             }
         }
@@ -98,7 +98,7 @@ public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
         {
             lock (accumulator.Gate)
             {
-                Prune(accumulator, now, options);
+                _prune(accumulator, now, options);
 
                 long recentCount = 0;
                 double recentTotal = 0;
@@ -113,9 +113,9 @@ public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
                 summaries.Add(new ApiPerformanceSummary(
                     accumulator.ApiName,
                     accumulator.TotalRequests,
-                    Average(accumulator.TotalMs, accumulator.TotalRequests),
+                    _average(accumulator.TotalMs, accumulator.TotalRequests),
                     recentCount,
-                    Average(recentTotal, recentCount)));
+                    _average(recentTotal, recentCount)));
             }
         }
 
@@ -123,7 +123,7 @@ public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
     }
 
     /// <summary>Drops samples older than the retention period or above the size cap. Caller must hold the lock.</summary>
-    private static void Prune(ApiAccumulator accumulator, DateTimeOffset now, StatisticsOptions options)
+    private static void _prune(ApiAccumulator accumulator, DateTimeOffset now, StatisticsOptions options)
     {
         var cutoff = now - TimeSpan.FromMinutes(options.SampleRetentionMinutes);
 
@@ -134,7 +134,7 @@ public sealed class InMemoryApiStatisticsStore : IApiStatisticsStore
         }
     }
 
-    private static double Average(double total, long count) => count == 0 ? 0 : Math.Round(total / count, 2);
+    private static double _average(double total, long count) => count == 0 ? 0 : Math.Round(total / count, 2);
 
     private readonly record struct Sample(DateTimeOffset Timestamp, double ElapsedMs);
 
