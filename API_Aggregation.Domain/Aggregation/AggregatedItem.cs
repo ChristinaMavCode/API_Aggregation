@@ -7,7 +7,7 @@ namespace API_Aggregation.Domain.Aggregation;
 /// </summary>
 public sealed class AggregatedItem
 {
-    /// <summary>Name of the external API that produced the item (e.g. "OpenWeatherMap").</summary>
+    /// <summary>Name of the external API that produced the item (e.g. "OpenMeteo").</summary>
     public required string Source { get; init; }
 
     public required ItemCategory Category { get; init; }

@@ -4,14 +4,17 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-namespace API_Aggregation.Infrastructure;
+namespace API_Aggregation.Infrastructure.Configurations;
 
 public static class TelemetryConfiguration
 {
+    private const string DefaultOtlpEndpoint = "http://localhost:4317";
+
     /// <summary>
-    /// Adds OpenTelemetry tracing (incoming requests + outgoing external API calls).
-    /// The OTLP exporter is only enabled when <c>OpenTelemetry:OtlpEndpoint</c> is configured,
-    /// so the service runs without a collector out of the box.
+    /// Adds OpenTelemetry tracing (incoming requests + outgoing external API calls) exported over
+    /// OTLP/gRPC to Jaeger (or any OTLP collector) at <c>OpenTelemetry:OtlpEndpoint</c>.
+    /// Defaults to <c>http://localhost:4317</c> when the key is missing; set it to an empty value to disable exporting.
+    /// If the collector is not running, spans are dropped silently and the API is not affected.
     /// </summary>
     public static IServiceCollection AddTelemetry(
         this IServiceCollection services,
@@ -19,7 +22,7 @@ public static class TelemetryConfiguration
         IConfiguration configuration,
         params string[] additionalSources)
     {
-        var endpoint = configuration["OpenTelemetry:OtlpEndpoint"];
+        var endpoint = configuration["OpenTelemetry:OtlpEndpoint"] ?? DefaultOtlpEndpoint;
 
         services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(serviceName))

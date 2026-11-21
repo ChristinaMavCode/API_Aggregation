@@ -14,7 +14,6 @@ public static class ExternalApisConfiguration
     public static IServiceCollection AddExternalApis(this IServiceCollection services, IConfiguration configuration)
     {
         // Adding a new API = one IExternalApiClient implementation + one line here + one config section.
-        services.AddExternalApiClient<OpenWeatherMapClient>(OpenWeatherMapClient.ApiName, configuration);
         services.AddExternalApiClient<OpenMeteoClient>(OpenMeteoClient.ApiName, configuration);
         services.AddExternalApiClient<HackerNewsClient>(HackerNewsClient.ApiName, configuration);
         services.AddExternalApiClient<GitHubClient>(GitHubClient.ApiName, configuration);
@@ -36,8 +35,7 @@ public static class ExternalApisConfiguration
 
         var options = section.Get<ExternalApiOptions>() ?? new ExternalApiOptions();
 
-        services
-            .AddHttpClient<TClient>(client =>
+        services.AddHttpClient<TClient>(client =>
             {
                 if (!string.IsNullOrWhiteSpace(options.BaseUrl))
                     client.BaseAddress = new Uri(options.BaseUrl.EndsWith('/') ? options.BaseUrl : options.BaseUrl + "/");

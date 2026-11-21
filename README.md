@@ -4,12 +4,11 @@ An ASP.NET Core (.NET 9) **minimal API** that fetches data from several external
 
 | External API | Category | API key | What is aggregated |
 |---|---|---|---|
-| [OpenWeatherMap](https://openweathermap.org/forecast5) | Weather | **required** (free) | 5 day / 3 hour forecast for the city |
 | [Open-Meteo](https://open-meteo.com) | Weather | none | Daily forecast for the city (geocoded first) |
 | [Hacker News (Algolia)](https://hn.algolia.com/api) | News | none | Stories matching the topic |
 | [GitHub Search](https://docs.github.com/en/rest/search) | Repository | optional | Most starred repositories matching the topic |
 
-> Three of the four APIs work without any key, so the service is usable out of the box. OpenWeatherMap is reported as `Disabled` until a key is configured.
+> None of the APIs needs a key, so the service works out of the box. GitHub accepts an optional personal access token (`ExternalApis:GitHub:ApiKey`) for a higher rate limit.
 
 ---
 
@@ -18,11 +17,8 @@ An ASP.NET Core (.NET 9) **minimal API** that fetches data from several external
 Prerequisites: [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0).
 
 ```bash
-# (optional) enable OpenWeatherMap – the key is stored outside the repository
-dotnet user-secrets --project API_Aggregation.Api set "ExternalApis:OpenWeatherMap:ApiKey" "<your-key>"
-
 dotnet run --project API_Aggregation.Api      # http://localhost:5281
-dotnet test                                   # 94 unit tests
+dotnet test                                   # 91 unit tests
 ```
 
 * Interactive API reference (Scalar): <http://localhost:5281/scalar/v1> (Development only)
@@ -33,7 +29,7 @@ Docker (from the repository root):
 
 ```bash
 docker build -f API_Aggregation.Api/Dockerfile -t api-aggregation .
-docker run -p 8080:8080 -e ExternalApis__OpenWeatherMap__ApiKey=<key> api-aggregation
+docker run -p 8080:8080 api-aggregation
 ```
 
 ---
@@ -82,7 +78,6 @@ Example: `GET /api/v1/aggregation?city=Athens&topic=dotnet&sortBy=relevance&page
   "pageSize": 2,
   "totalPages": 24,
   "sources": [
-    { "source": "OpenWeatherMap", "status": "Disabled", "itemCount": 0,  "responseTimeMs": null,   "error": "The API key is not configured." },
     { "source": "OpenMeteo",      "status": "Live",     "itemCount": 7,  "responseTimeMs": 663.35, "error": null },
     { "source": "HackerNews",     "status": "Cached",   "itemCount": 20, "responseTimeMs": 0,      "error": null },
     { "source": "GitHub",         "status": "Stale",    "itemCount": 20, "responseTimeMs": 15002,  "error": "The external API is currently unavailable. Showing the last known data." }
@@ -110,7 +105,7 @@ Example: `GET /api/v1/aggregation?city=Athens&topic=dotnet&sortBy=relevance&page
 | `Cached` | Served from the cache – no external call |
 | `Stale` | The API failed; the last known good data is returned (fallback) |
 | `Unavailable` | The API failed and there is no fallback data – the rest of the response is still returned |
-| `Disabled` | Disabled in configuration or API key missing |
+| `Disabled` | Disabled in configuration (`ExternalApis:<Name>:Enabled = false`) |
 
 **Relevance** is normalised to `[0, 1]` per source: weather → proximity of the forecast to *now*; news → the provider's own ranking position; repositories → stars relative to the most starred result.
 
@@ -247,7 +242,7 @@ Performance anomaly detected for GitHub: average over the last 5 min is 812.4 ms
 | `AnomalyDetection` | `Enabled`, `IntervalSeconds` (60), `WindowMinutes` (5), `ThresholdPercent` (50), `MinimumSamples` (3) |
 | `Jwt` | `Key`, `Issuer`, `Audience`, `ExpiryMinutes` |
 | `Auth:Users` | Demo credentials (`demo` / `demo-password`) |
-| `OpenTelemetry:OtlpEndpoint` | Optional OTLP collector, e.g. `http://localhost:4317` (tracing is exported only when this is set) |
+| `OpenTelemetry:OtlpEndpoint` | OTLP/gRPC endpoint of Jaeger (or any OTLP collector). Default `http://localhost:4317`; in Docker Compose use the service name, e.g. `http://jaeger:4317`. Set to empty to disable exporting. |
 
 Any value can be overridden with environment variables, e.g. `ExternalApis__GitHub__ApiKey=...`.
 
@@ -255,16 +250,16 @@ Any value can be overridden with environment variables, e.g. `ExternalApis__GitH
 
 ## Tests
 
-`API_Aggregation.UnitTests` (xUnit v3, Moq, `FakeTimeProvider`, `FakeLogger`): 94 tests, no network access needed.
+`API_Aggregation.UnitTests` (xUnit v3, Moq, `FakeTimeProvider`, `FakeLogger`): 91 tests, no network access needed.
 
 | Area | What is covered |
 |---|---|
-| `ExternalApiFetcher` | live / cached / cache expiry, stale fallback, unavailable, disabled & missing key, statistics recorded only for real calls, request coalescing, cancellation, error details not leaked |
+| `ExternalApiFetcher` | live / cached / cache expiry, stale fallback, unavailable, disabled by configuration, statistics recorded only for real calls, request coalescing, cancellation, error details not leaked |
 | Query handler | aggregation of all sources, **parallel execution**, category / source selection, topic default, partial failure, sorting & paging |
 | Validation | validators and the MediatR validation pipeline |
 | Filtering / sorting | every sort field and direction, date range, text search, paging edge cases |
 | Statistics store | totals, averages, bucket boundaries, **thread safety under 16 concurrent writers + readers**, retention and sample cap |
 | Anomaly detection | detection threshold, stable APIs, minimum samples, the background service logging |
-| API clients | payload mapping for all four APIs via a stubbed `HttpMessageHandler`, 404 handling, server errors |
+| API clients | payload mapping for all three APIs via a stubbed `HttpMessageHandler`, 404 handling, server errors |
 | Auth | token creation and validation, wrong key rejected, credential validation |
 | Mapping | Mapperly mappings (enums as names, item count, buckets) |

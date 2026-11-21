@@ -1,6 +1,6 @@
 # Build from the repository root:
 #   docker build -f API_Aggregation.Api/Dockerfile -t api-aggregation .
-#   docker run -p 8080:8080 -e ExternalApis__OpenWeatherMap__ApiKey=<key> api-aggregation
+#   docker run -p 8080:8080 api-aggregation
 
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build

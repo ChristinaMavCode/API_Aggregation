@@ -26,10 +26,8 @@ public abstract class ExternalApiClientBase(HttpClient httpClient, IOptionsMonit
 
     public abstract ItemCategory Category { get; }
 
-    // Declared virtual here (instead of relying on the interface default members) so that
-    // derived clients can override them: interface mapping is resolved on this base class.
-    public virtual bool RequiresApiKey => false;
-
+    // Declared virtual here (instead of relying on the interface default member) so that
+    // derived clients can override it: interface mapping is resolved on this base class.
     public virtual string GetCacheKey(ExternalApiRequest request) => $"{request.City}|{request.Topic}";
 
     public abstract Task<IReadOnlyList<AggregatedItem>> FetchAsync(ExternalApiRequest request, CancellationToken cancellationToken);

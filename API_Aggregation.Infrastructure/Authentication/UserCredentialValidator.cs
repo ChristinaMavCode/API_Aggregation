@@ -11,7 +11,7 @@ namespace API_Aggregation.Infrastructure.Authentication;
 /// Passwords are compared in constant time to avoid timing attacks.
 /// NOTE: demo only - a real deployment would delegate to an identity provider.
 /// </summary>
-public sealed class ConfigurationUserCredentialValidator(IOptionsMonitor<AuthUsersOptions> optionsMonitor) : IUserCredentialValidator
+public sealed class UserCredentialValidator(IOptionsMonitor<AuthUsersOptions> optionsMonitor) : IUserCredentialValidator
 {
     public bool IsValid(string username, string password)
     {

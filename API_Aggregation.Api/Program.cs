@@ -1,7 +1,6 @@
 using System.Text.Json;
 using API_Aggregation.Api.Endpoints;
 using API_Aggregation.Api.OpenApi;
-using API_Aggregation.Infrastructure;
 using API_Aggregation.Infrastructure.Configurations;
 using Asp.Versioning;
 using Scalar.AspNetCore;

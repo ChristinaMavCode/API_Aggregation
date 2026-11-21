@@ -130,16 +130,6 @@ public class ExternalApiFetcherTests
         Assert.Equal(0, client.CallCount);
     }
 
-    [Fact]
-    public async Task FetchAsync_ReturnsDisabled_WhenTheApiKeyIsRequiredButMissing()
-    {
-        var client = new FakeApiClient("Api") { RequiresApiKey = true }.Returning(Items.Create());
-
-        var result = await _fetcher.FetchAsync(client, Request, CancellationToken.None);
-
-        Assert.Equal(SourceStatus.Disabled, result.Status);
-        Assert.Equal(0, client.CallCount);
-    }
 
     [Fact]
     public async Task FetchAsync_DeduplicatesConcurrentIdenticalRequests()

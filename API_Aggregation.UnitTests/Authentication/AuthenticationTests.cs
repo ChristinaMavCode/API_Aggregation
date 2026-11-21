@@ -64,7 +64,7 @@ public class AuthenticationTests
     public void CredentialValidator_ValidatesAgainstConfiguredUsers(string username, string password, bool expected)
     {
         var options = new AuthUsersOptions { Users = [new AuthUser { Username = "demo", Password = "demo-password" }] };
-        var validator = new ConfigurationUserCredentialValidator(new TestOptionsMonitor<AuthUsersOptions>(options));
+        var validator = new UserCredentialValidator(new TestOptionsMonitor<AuthUsersOptions>(options));
 
         Assert.Equal(expected, validator.IsValid(username, password));
     }

@@ -22,7 +22,7 @@ public static class AuthenticationConfiguration
         services.AddOptions<AuthUsersOptions>().Bind(configuration.GetSection(AuthUsersOptions.SectionName));
 
         services.AddSingleton<ITokenService, JwtTokenService>();
-        services.AddSingleton<IUserCredentialValidator, ConfigurationUserCredentialValidator>();
+        services.AddSingleton<IUserCredentialValidator, UserCredentialValidator>();
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

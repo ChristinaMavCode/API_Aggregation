@@ -18,9 +18,6 @@ public interface IExternalApiClient
 
     ItemCategory Category { get; }
 
-    /// <summary>When true the client is reported as disabled if no API key is configured.</summary>
-    bool RequiresApiKey => false;
-
     /// <summary>
     /// Builds the part of the cache key that identifies the request for this client.
     /// Clients that ignore some request parameters override it so that they don't

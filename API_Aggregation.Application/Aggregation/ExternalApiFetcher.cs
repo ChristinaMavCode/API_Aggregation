@@ -37,9 +37,6 @@ public sealed class ExternalApiFetcher(
         if (!options.Enabled)
             return new SourceResult(client.Name, SourceStatus.Disabled, [], Error: "The API is disabled by configuration.");
 
-        if (client.RequiresApiKey && string.IsNullOrWhiteSpace(options.ApiKey))
-            return new SourceResult(client.Name, SourceStatus.Disabled, [], Error: "The API key is not configured.");
-
         var cacheKey = $"{client.Name}:{client.GetCacheKey(request)}".ToLowerInvariant();
 
         if (cache.TryGetValue(FreshKey(cacheKey), out IReadOnlyList<AggregatedItem>? cachedItems) && cachedItems is not null)

@@ -23,52 +23,6 @@ public class ExternalApiClientTests
         new TestOptionsMonitor<ExternalApiOptions>(new ExternalApiOptions()).With(name, options);
 
     [Fact]
-    public async Task OpenWeatherMap_MapsTheForecast()
-    {
-        const string json = """
-            {
-              "list": [
-                { "dt": 1795003200, "main": { "temp": 18.4, "feels_like": 17.9, "humidity": 60 },
-                  "weather": [ { "main": "Clouds", "description": "broken clouds" } ], "wind": { "speed": 3.2 } }
-              ],
-              "city": { "id": 264371, "name": "Athens", "country": "GR" }
-            }
-            """;
-        var handler = StubHttpMessageHandler.Json(json);
-        var client = new OpenWeatherMapClient(
-            Http(handler, "https://api.openweathermap.org/"),
-            Options(OpenWeatherMapClient.ApiName, new ExternalApiOptions { ApiKey = "KEY", MaxItems = 5 }),
-            new FakeTimeProvider(Now));
-
-        var item = Assert.Single(await client.FetchAsync(Request, CancellationToken.None));
-
-        Assert.Equal("OpenWeatherMap", item.Source);
-        Assert.Equal(ItemCategory.Weather, item.Category);
-        Assert.Equal("Athens: 18.4°C, broken clouds", item.Title);
-        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1795003200), item.Timestamp);
-        Assert.Equal("https://openweathermap.org/city/264371", item.Url);
-        Assert.Equal("60", item.Metadata["humidity"]);
-        Assert.InRange(item.Relevance, 0, 1);
-
-        var uri = Assert.Single(handler.Requests).ToString();
-        Assert.Contains("q=Athens", uri);
-        Assert.Contains("appid=KEY", uri);
-        Assert.Contains("cnt=5", uri);
-        Assert.True(client.RequiresApiKey);
-    }
-
-    [Fact]
-    public async Task OpenWeatherMap_ReturnsNoItems_ForAnUnknownCity()
-    {
-        var client = new OpenWeatherMapClient(
-            Http(StubHttpMessageHandler.Json("""{"cod":"404"}""", HttpStatusCode.NotFound), "https://api.openweathermap.org/"),
-            Options(OpenWeatherMapClient.ApiName, new ExternalApiOptions { ApiKey = "KEY" }),
-            new FakeTimeProvider(Now));
-
-        Assert.Empty(await client.FetchAsync(Request, CancellationToken.None));
-    }
-
-    [Fact]
     public async Task OpenMeteo_GeocodesTheCity_ThenMapsTheDailyForecast()
     {
         var handler = new StubHttpMessageHandler(req => req.RequestUri!.Host.StartsWith("geocoding")

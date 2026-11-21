@@ -51,8 +51,6 @@ public sealed class FakeApiClient(string name, ItemCategory category = ItemCateg
 
     public ItemCategory Category { get; } = category;
 
-    public bool RequiresApiKey { get; init; }
-
     public Func<ExternalApiRequest, CancellationToken, Task<IReadOnlyList<AggregatedItem>>> Handler { get; set; } =
         (_, _) => Task.FromResult<IReadOnlyList<AggregatedItem>>([]);
 
